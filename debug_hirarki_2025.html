@@ -1,0 +1,967 @@
+
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <title>Debug Hirarki Dokumen 2025</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+        <style>
+            body { padding: 40px; background-color: #f8f9fa; }
+            .container-fluid { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+            h2 { color: #0d6efd; border-left: 5px solid #0d6efd; padding-left: 15px; }
+        </style>
+    </head>
+    <body>
+        <div class="container-fluid">
+            <h2>Analisis Hirarki Dokumen Kerja Sama (Filter: 2025)</h2>
+            <hr>
+            <table border="1" class="dataframe display table table-hover" id="tabelDebug">
+  <thead>
+    <tr style="text-align: right;">
+      <th>id_x</th>
+      <th>nomor_dokumen</th>
+      <th>jenis_dokumen</th>
+      <th>mitra</th>
+      <th>ref_mou</th>
+      <th>status_hitung</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>052e9fe5</td>
+      <td>0382/PL16/KS.11/2025</td>
+      <td>PKS</td>
+      <td>INTERNATIONAL TALENT CIRCULATION BASE (TAIWAN-INDONESIA)</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>e8d825eb</td>
+      <td>-</td>
+      <td>RENCANA IMPLEMENTASI</td>
+      <td>INTERNATIONAL TALENT CIRCULATION BASE (TAIWAN-INDONESIA)</td>
+      <td>052e9fe5</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>bb966534</td>
+      <td>1039/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>MAN 2 PONTIANAK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>01eee883</td>
+      <td>0204/PL16/KS.00.01/2025</td>
+      <td>MOU</td>
+      <td>UNIVERSITE PARIS-EST CRETEIL (UPEC), FRANCE</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>b6d4cb27</td>
+      <td>0205/PL16/KS.00.01/2025</td>
+      <td>PKS</td>
+      <td>UNIVERSITE PARIS-EST CRETEIL (UPEC), FRANCE</td>
+      <td>01eee883</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>fb826f5a</td>
+      <td>3034/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>CV TRIO KOKKINO INTERNUSA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>c9bbd30e</td>
+      <td>3165/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>POLITEKNIK NEGERI SAMBAS</td>
+      <td>2fe93e23</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>1aaccd3d</td>
+      <td>0756/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>INSTITUT TEKNOLOGI DAN KESEHATAN  MUHAMMADIYAH KALIMANTAN BARAT</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>df167590</td>
+      <td>4172/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>BALAI PENGELOLAAN SUMBER DAYA PESISIR DAN LAUT PONTIANAK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>29cc9ba4</td>
+      <td>3486/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>DEUTSCHE GESELLSCHAFT FUR INTERNATIONALE ZUSAMMENARBEIT</td>
+      <td>67db5633</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>d67599e7</td>
+      <td>4721/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>UNIVERSITAS PANCA BHAKTI</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>e4631d7f</td>
+      <td>4722/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>UNIVERSITAS PANCA BHAKTI</td>
+      <td>d67599e7</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>452de02b</td>
+      <td>-</td>
+      <td>PKS</td>
+      <td>PT. KINOBI TECHNOLOGIES INDONESIA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>448fb12a</td>
+      <td>3776/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PONDOK PESANTREN MIFTAHUL ULUM KUMPAI</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>149cf5c9</td>
+      <td>4518/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>PT. BANK NEGARA INDONESIA (PERSERO) TBK.</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>39da5afd</td>
+      <td>4521/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PT. BANK NEGARA INDONESIA (PERSERO) TBK.</td>
+      <td>149cf5c9</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>f6c5156c</td>
+      <td>4877/PL16/KS.00.00/2025</td>
+      <td>PSM</td>
+      <td>KANTIN LUKAS WIBOWO SASONGKO</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>e741154a</td>
+      <td>5016/PL16/KS.00.00/2025</td>
+      <td>PSM</td>
+      <td>KANTIN HAJAR</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>63ffd8de</td>
+      <td>5017/PL16/KS.00.00/2025</td>
+      <td>PSM</td>
+      <td>KANTIN HAJAR</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>e053eef8</td>
+      <td>4519/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>PT. BANK TABUNGAN NEGARA (PERSERO) TBK</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>1741ef80</td>
+      <td>4522/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PT. BANK TABUNGAN NEGARA (PERSERO) TBK</td>
+      <td>e053eef8</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>911601ec</td>
+      <td>5480/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>DIREKTORAT SEKOLAH DASAR</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>88713c01</td>
+      <td>5984/PL16/KS.00.00/2025</td>
+      <td>KONTRAK</td>
+      <td>DIREKTORAT SEKOLAH DASAR</td>
+      <td>911601ec</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>b4412c18</td>
+      <td>5551/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>PT ARAH INOVASI TEKNOLOGI</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>5a09878f</td>
+      <td>5554/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>YAYASAN GHALIH PELOPOR PENDIDIKAN</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>80f5c26a</td>
+      <td>5555/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>YAYASAN GHALIH PELOPOR PENDIDIKAN</td>
+      <td>5a09878f</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>12383cc4</td>
+      <td>6060/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>UNIVERSITAS PGRI PONTIANAK</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>6e311b85</td>
+      <td>0757/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>INSTITUT TEKNOLOGI DAN KESEHATAN  MUHAMMADIYAH KALIMANTAN BARAT</td>
+      <td>1aaccd3d</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>cf318257</td>
+      <td>3502/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>LEMBAGA PENYIARAN PUBLIK RADIO REPUBLIK INDONESIA (RRI) ENTIKONG</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>053fc7e9</td>
+      <td>5664/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>UNIVERSITAS OSO</td>
+      <td>d65a4c5d</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>1e7e0065</td>
+      <td>6882/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>KELOMPOK PKK DESA SUNGAI RASAU</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>23454821</td>
+      <td>6656/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>KLUB RISET TERAS KOMUNIKA, ILMU KOMUNIKASI FISIP UNTAN</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>9e0d28d0</td>
+      <td>3301/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>RUMAH BUMN SANGGAU</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>186fb60a</td>
+      <td>3551/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>RUMAH BUMN SANGGAU</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>798bbf85</td>
+      <td>4434/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>RUMAH BUMN SANGGAU</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>9a1c8938</td>
+      <td>6885/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PEMERINTAH DESA SEBATUAN</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>c662b6e9</td>
+      <td>7178/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>BALAI LATIHAN KERJA KOMUNITAS DZAL HAJRA KALIMANTAN BARAT</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>24b0dfd8</td>
+      <td>7303/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>MIFTAHUL ULUM MART</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>6d7c60cb</td>
+      <td>5116/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PEMERINTAH DESA SUNGAI BESAR</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>5c59d0f8</td>
+      <td>6057/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>KELURAHAN KEDAMIN HULU</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>0a6ae060</td>
+      <td>7036/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>KELURAHAN PUTUSSIBAU KOTA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>d35e6cbc</td>
+      <td>5542/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>UNIVERSITAS PENDIDIKAN INDONESIA</td>
+      <td>ad35c1ab</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>40e41d76</td>
+      <td>7554/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>KAMAR DAGANG INDUSTRI PROVINSI KALIMANTAN BARAT</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>8abba5ab</td>
+      <td>6878/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>KELOMPOK TANI MAKMUR JAYA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>2d0da9cc</td>
+      <td>6841/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>POKDARWIS BENUA SANGGAU</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>49ee7442</td>
+      <td>6659/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>POKDAKAN HARAPAN JAYA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>fbcb8e30</td>
+      <td>7084/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PEMERINTAH DESA PAL IX</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>d0732146</td>
+      <td>7355/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>GERAKAN AKU BELAJAR MENDIDIK NUSANTARA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>329c374e</td>
+      <td>7083/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PEMERINTAH DESA LIMBUNG</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>61033296</td>
+      <td>7859/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>BAITUL MAAL WATAMWIL AMANAH MAFAZA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>df6d0138</td>
+      <td>7697/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>MTS NURUL FALAH TELUK PAKEDAI</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>106063fb</td>
+      <td>7815/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>WUHAN CENTRAL FOREIGN ECONOMIC & TECHNICAL COOPERATION GROUP Co., Ltd.</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>3ff8f725</td>
+      <td>6924/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>SMK NEGERI 1 JELAI</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>7c0fde5b</td>
+      <td>7341/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>BUMDES SERDAM MAJU BERSAMA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>cf81a8d8</td>
+      <td>7335/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PT BORNEO LINTAS DUNIA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>6e40b7f4</td>
+      <td>7779/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PEMERINTAH DESA TELUK PAKEDAI HULU</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>0d87b9bc</td>
+      <td>7737/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>MASJID AL-ITISHOM KUBU RAYA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>f851af6c</td>
+      <td>3503/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>MASJID MA'ASH SHABIRIN</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>14e7f445</td>
+      <td>9484/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PEMERINTAH DESA SUNGAI RENGAS</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>e7c54b78</td>
+      <td>6384/PL16/KS.00.00/2025</td>
+      <td>PSM</td>
+      <td>KANTIN HAJAR</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>52541341</td>
+      <td>6385/PL16/KS.00.00/2025</td>
+      <td>PSM</td>
+      <td>KANTIN HAJAR</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>4622ea97</td>
+      <td>9888/PL16/KS.00.01/2025</td>
+      <td>RENCANA IMPLEMENTASI</td>
+      <td>POLITEKNIK KUCHING SARAWAK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>e6d17130</td>
+      <td>9889/PL16/KS.00.01/2025</td>
+      <td>RENCANA IMPLEMENTASI</td>
+      <td>POLITEKNIK KUCHING SARAWAK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>8cd3e649</td>
+      <td>9890/PL16/KS.00.01/2025</td>
+      <td>RENCANA IMPLEMENTASI</td>
+      <td>POLITEKNIK KUCHING SARAWAK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>6477c235</td>
+      <td>9891/PL16/KS.00.01/2025</td>
+      <td>RENCANA IMPLEMENTASI</td>
+      <td>POLITEKNIK KUCHING SARAWAK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>5f9fca5c</td>
+      <td>9892/PL16/KS.00.01/2025</td>
+      <td>RENCANA IMPLEMENTASI</td>
+      <td>POLITEKNIK KUCHING SARAWAK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>280b0596</td>
+      <td>9893/PL16/KS.00.01/2025</td>
+      <td>RENCANA IMPLEMENTASI</td>
+      <td>POLITEKNIK KUCHING SARAWAK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>494c093f</td>
+      <td>5865/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>KELURAHAN SAGATANI</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>42c1fca9</td>
+      <td>3794/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>YAYASAN DZAL HAJRA KUBU RAYA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>c1dafee6</td>
+      <td>4510/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PONDOK PESANTREN AL-I'TISHOM</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>98a923ad</td>
+      <td>5444/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>YAYASAN PERGURUAN ISLAMIYAH</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>122a7f0d</td>
+      <td>6819/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>BKMT KABUPATEN KUBU RAYA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>3d8f052d</td>
+      <td>6820/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>POLITEKNIK NEGERI KETAPANG</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>9adbc332</td>
+      <td>6884/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>SMK NEGERI 2 SAMBAS</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>fc2e3ffd</td>
+      <td>7152/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>MAN SUKAMARA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>a8e5724f</td>
+      <td>7272/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>MAN SUKAMARA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>6e6924c9</td>
+      <td>8136/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>SMK NEGERI 1 SUNGAI KUNYIT</td>
+      <td>10723056</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>ec1a8552</td>
+      <td>9885/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>MADRASAH TSANAWIYAH BAITUL MUBAROK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>d1faefd6</td>
+      <td>10886/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>LSP KOPI INDONESIA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>d7f7077f</td>
+      <td>11737/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>LEMBAGA WINNER INDONESIA LEARNING</td>
+      <td>f561b327</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>85572613</td>
+      <td>11738/PL16/KS.00.00/2025</td>
+      <td>RENCANA IMPLEMENTASI</td>
+      <td>LEMBAGA WINNER INDONESIA LEARNING</td>
+      <td>d7f7077f</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>401478f0</td>
+      <td>11546/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>SMK NEGERI 4 PONTIANAK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>b4b119ed</td>
+      <td>12702/ PL16/KS.00.00/2025</td>
+      <td>PSM</td>
+      <td>FAKULTAS EKONOMI DAN BISNIS UNIVERSITAS TANJUNGPURA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>856cfe12</td>
+      <td>12704/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>DISTRIK NAVIGASI TIPE A KELAS III PONTIANAK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>53ad520c</td>
+      <td>13049/PL16/KS.00.00/2025</td>
+      <td>KONTRAK</td>
+      <td>DINAS KESEHATAN KABUPATEN KETAPANG</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>264fd398</td>
+      <td>9222/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>KRATON PAKUNEGARA TAYAN</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>011e8cee</td>
+      <td>6104/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>BADAN PENELITIAN DAN PENGEMBANGAN DAERAH PROVINSI KALIMANTAN BARAT</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>ce599f2b</td>
+      <td>9853/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>SMK NEGERI 1 PEMANGKAT</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>c8520019</td>
+      <td>12491/PL16/KS.00.00/2025</td>
+      <td>PSM</td>
+      <td>DIPONEGORO SMART SOLUTION</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>02cc6644</td>
+      <td>12601/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>POLITEKNIK NEGERI LAMPUNG</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>d3715414</td>
+      <td>12602/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>POLITEKNIK NEGERI LAMPUNG</td>
+      <td>02cc6644</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>f8c39b34</td>
+      <td>13265/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>POLITEKNIK NEGERI MALANG</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>6e6542a1</td>
+      <td>13675/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>INDONESIAN SCHOLAR SOCIETY</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>f4da7f04</td>
+      <td>13676/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>INDONESIAN SCHOLAR SOCIETY</td>
+      <td>6e6542a1</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>0432c21c</td>
+      <td>13728/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>CV BORCHA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>708ab363</td>
+      <td>14064/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PT. BANK NEGARA INDONESIA (PERSERO) TBK.</td>
+      <td>149cf5c9</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>68eb104b</td>
+      <td>14637/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>POLITEKNIK AISYIYAH PONTIANAK</td>
+      <td>9a022ba3</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>bfaa5310</td>
+      <td>15295/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>ATLANTIS PRESS</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>7b029783</td>
+      <td>15529/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PEMERINTAH DESA SUNGAI DURI II</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>ae6a8b18</td>
+      <td>3610/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>RUMAH BUMN SANGGAU</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>902303ce</td>
+      <td>10195/PL16/KS.00.00/2025</td>
+      <td>KONTRAK</td>
+      <td>DIREKTORAT SEKOLAH DASAR</td>
+      <td>911601ec</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>c83ef695</td>
+      <td>12651/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PT. BANK NEGARA INDONESIA (PERSERO) TBK.</td>
+      <td>149cf5c9</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>3bf4d906</td>
+      <td>14221/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>UNIT PEMBENIHAN DAN PENDEDERAN IKAN AIR TAWAR (UPPIAT) AMPERA</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>4293e81a</td>
+      <td>14222/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>UNIT PEMBENIHAN DAN PENDEDERAN IKAN AIR TAWAR (UPPIAT) AMPERA</td>
+      <td>3bf4d906</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>8c3ae131</td>
+      <td>14223/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>CV AGRIBISNIS MULTI SEKTOR</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>851e1ae5</td>
+      <td>14224/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>CV AGRIBISNIS MULTI SEKTOR</td>
+      <td>8c3ae131</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>ee33a99f</td>
+      <td>14812/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>UNIVERSITAS ISLAM NEGERI KIAI HAJI ACHMAD SIDDIQ JEMBER (UIN KHAS JEMBER)</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>d1327750</td>
+      <td>15476/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>RW 03 KELURAHAN BANSIR LAUT</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>54584a35</td>
+      <td>15538/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>PT INOVASI MINA AGRO</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>efc93b69</td>
+      <td>15539/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PT INOVASI MINA AGRO</td>
+      <td>54584a35</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>59f1cf83</td>
+      <td>14759/PL16/KS.00.00/2025</td>
+      <td>MOU</td>
+      <td>SMK NEGERI 1 SUNGAI RAYA</td>
+      <td>-</td>
+      <td><span class="badge bg-danger">DIABAIKAN (Induk)</span></td>
+    </tr>
+    <tr>
+      <td>eaeb1487</td>
+      <td>14760/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>SMK NEGERI 1 SUNGAI RAYA</td>
+      <td>59f1cf83</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>237a113b</td>
+      <td>7744/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>SMK NEGERI 1 SUNGAI RAYA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>237a113b</td>
+      <td>7744/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>SMK NEGERI 7 PONTIANAK</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+    <tr>
+      <td>cdcb1cd6</td>
+      <td>7273/PL16/KS.00.00/2025</td>
+      <td>PKS</td>
+      <td>PT BORNEO LINTAS DUNIA</td>
+      <td>-</td>
+      <td><span class="badge bg-success">DIHITUNG (Leaf)</span></td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+
+        <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+        <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+        <script>
+            $(document).ready(function() {
+                $('#tabelDebug').DataTable({
+                    "pageLength": 25,
+                    "language": { "search": "Cari Data:" }
+                });
+            });
+        </script>
+    </body>
+    </html>
+    
