@@ -1,0 +1,245 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+// ==========================================
+// MAIN TABLES (T_)
+// ==========================================
+
+Table T_pengajuan_kerjasama {
+  id varchar [primary key]
+  tanggal_pengajuan date
+  sifat_pengajuan varchar
+  wilayah_kerjasama varchar
+  jenis_dokumen varchar
+  judul_dokumen varchar
+  tentang varchar
+  durasi_perjanjian integer
+  satuan_durasi_perjanjian varchar
+  inisiator varchar
+  inisiasi_lembaga varchar
+  inisiasi_program varchar
+  status_pengajuan varchar
+  inisiasi varchar
+  keterangan varchar
+  sub_status varchar
+  unit_polnep varchar
+}
+
+Table T_dokumen_kerjasama {
+  id varchar [primary key]
+  ref_pengajuan_kerjasama varchar
+  ref_mou varchar
+  nomor_dokumen varchar
+  tanggal_penetapan date
+  tanggal_mulai date
+  tanggal_berakhir date
+  link_dokumen varchar
+  ref_penandatangan varchar
+  status_laporkerma varchar
+  ruang_lingkup varchar
+  deskripsi varchar
+  non_dok_pejabat varchar
+  jabatan_penandatangan varchar
+  alokasi_anggaran double
+  income_generate double
+  unit_terkait varchar
+  program varchar
+  kelengkapan_data varchar
+  ref_kegiatan varchar
+}
+
+Table T_mitra {
+  id varchar [primary key]
+  nib varchar
+  mitra varchar
+  kategori_mitra varchar
+  badan_mitra varchar
+  kriteria_mitra varchar
+  klasifikasi_mitra varchar
+  klbi varchar
+  tanggal_pendirian date
+  alamat varchar
+  negara_mitra varchar
+  provinsi_mitra varchar
+  kabupaten_kota_mitra varchar
+  email varchar
+  telepon varchar
+  kodepos varchar
+  website varchar
+  logo varchar
+  profil varchar
+  sub_kategori_mitra varchar
+}
+
+Table T_person {
+  id varchar [primary key]
+  nama varchar
+  email varchar
+  telepon varchar
+  jabatan varchar
+  alamat varchar
+  kantor varchar
+}
+
+Table T_kegiatan {
+  id varchar [primary key]
+  kategori_kegiatan varchar
+  nama_kegiatan varchar
+  nilai_kontrak double
+  sasaran_kegiatan varchar
+  indikator_kinerja varchar
+  link_dokumentasi varchar
+  dok_laporan_kegiatan varchar
+  tgl_mulai date
+  tgl_selesai date
+  output varchar
+  outcome varchar
+  pic varchar
+  link_pengajuan_kerjasama varchar
+  foto_kegiatan varchar
+  sub_kategori varchar
+  deskripsi_kegiatan varchar
+  kategori_nilai_kontrak varchar
+  wilayah_kerjasama varchar
+}
+
+Table T_ruang_lingkup {
+  id varchar [primary key]
+  ruang_lingkup varchar
+  sub_ruang_lingkup varchar
+  kategori_ruang_lingkup varchar
+  keterangan varchar
+}
+
+Table T_output {
+  id varchar [primary key]
+  output varchar
+  jumlah integer
+  satuan varchar
+  link_bukti varchar
+}
+
+
+// ==========================================
+// MANY-TO-MANY / MAPPING TABLES (M_)
+// ==========================================
+
+Table M_ruang_lingkup {
+  id varchar [primary key]
+  id_dokumen_kerjasama varchar
+  id_ruang_lingkup varchar
+}
+
+Table M_mitra_bekerjasama {
+  id varchar [primary key]
+  ref_pengajuan_kerjasama varchar
+  ref_mitra varchar
+  ref_pic_mitra varchar
+  ref_penandatangan_mitra varchar
+  nomor_dokumen_mitra varchar
+  jabatan_pic_mitra varchar
+  jabatan_penandatangan_mitra varchar
+}
+
+Table M_kegiatan_kerjasama {
+  id varchar [primary key]
+  ref_dokumen_kerjasama varchar
+  ref_kegiatan varchar
+}
+
+Table M_output_kegiatan {
+  id varchar [primary key]
+  ref_kegiatan varchar
+  ref_output varchar
+}
+
+Table M_tim_pelaksana {
+  id varchar [primary key]
+  ref_T_unit_pelaksana_kegiatan varchar
+  ref_T_person varchar
+  status varchar
+  no_id varchar
+  jabatan varchar
+}
+
+Table M_unit_pelaksana_kerjasama {
+  id varchar [primary key]
+  ref_kegiatan varchar
+  ref_unit_pelaksana_kegiatan varchar
+}
+
+
+// ==========================================
+// NOMENCLATURE / REFERENCE TABLES (N_)
+// ==========================================
+
+Table N_kabupaten_kota {
+  id varchar [primary key]
+  provinsi varchar
+  kabupaten_kota varchar
+}
+
+Table N_indikator_kinerja {
+  id varchar [primary key]
+  sasaran_kegiatan varchar
+  indikator_kinerja varchar
+}
+
+Table N_prodi {
+  id varchar [primary key]
+  kampus varchar
+  diploma varchar
+  jurusan varchar
+  prodi varchar
+  prodi2 varchar
+}
+
+Table N_ruang_lingkup {
+  id varchar [primary key]
+  jenis_kerjasama varchar
+  kategori varchar
+  ruang_lingkup varchar
+}
+
+
+// ==========================================
+// RELATIONSHIPS (Ref)
+// ==========================================
+
+// Pengajuan Kerjasama
+Ref: T_pengajuan_kerjasama.inisiator > T_person.id
+
+// Dokumen Kerjasama
+Ref: T_dokumen_kerjasama.ref_pengajuan_kerjasama - T_pengajuan_kerjasama.id
+Ref: T_dokumen_kerjasama.ref_mou - T_dokumen_kerjasama.id // Self-referencing (Turunan MoU ke PKS)
+Ref: T_dokumen_kerjasama.ref_penandatangan > T_person.id
+Ref: T_dokumen_kerjasama.ref_kegiatan > T_kegiatan.id
+
+// Kegiatan
+Ref: T_kegiatan.pic > T_person.id
+
+// Mapping Ruang Lingkup
+Ref: M_ruang_lingkup.id_dokumen_kerjasama > T_dokumen_kerjasama.id
+Ref: M_ruang_lingkup.id_ruang_lingkup > T_ruang_lingkup.id
+
+// Mapping Mitra Bekerjasama
+Ref: M_mitra_bekerjasama.ref_pengajuan_kerjasama > T_pengajuan_kerjasama.id
+Ref: M_mitra_bekerjasama.ref_mitra > T_mitra.id
+Ref: M_mitra_bekerjasama.ref_pic_mitra > T_person.id
+Ref: M_mitra_bekerjasama.ref_penandatangan_mitra > T_person.id
+
+// Mapping Kegiatan Kerjasama
+Ref: M_kegiatan_kerjasama.ref_dokumen_kerjasama > T_dokumen_kerjasama.id
+Ref: M_kegiatan_kerjasama.ref_kegiatan > T_kegiatan.id
+
+// Mapping Output Kegiatan
+Ref: M_output_kegiatan.ref_kegiatan > T_kegiatan.id
+Ref: M_output_kegiatan.ref_output > T_output.id
+
+// Mapping Tim Pelaksana
+Ref: M_tim_pelaksana.ref_T_person > T_person.id
+// Catatan: ref_T_unit_pelaksana_kegiatan belum di-relasikan karena tabel T_unit_pelaksana_kegiatan tidak ada di JSON
+
+// Mapping Unit Pelaksana Kerjasama
+Ref: M_unit_pelaksana_kerjasama.ref_kegiatan > T_kegiatan.id
+// Catatan: ref_unit_pelaksana_kegiatan belum di-relasikan karena tabel T_unit_pelaksana_kegiatan tidak ada di JSON
