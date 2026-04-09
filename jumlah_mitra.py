@@ -45,6 +45,7 @@ def analisis_hirarki_otomatis():
     )
     df_dokumen = df_dokumen.dropna(subset=['dt_penetapan'])
     df_dokumen['tahun'] = df_dokumen['dt_penetapan'].dt.year.astype(int)
+    df_dokumen['triwulan'] = 'Q' + df_dokumen['dt_penetapan'].dt.quarter.astype(int).astype(str)
 
     # =======================================================
     # 3. LOGIKA HIRARKI OTOMATIS (Ancestor vs Leaf)
@@ -65,7 +66,7 @@ def analisis_hirarki_otomatis():
     # 4. GABUNGKAN DENGAN DATA MITRA
     # =======================================================
     df_final = pd.merge(
-        df_leaves[['id', 'ref_pengajuan_kerjasama', 'tahun']], 
+        df_leaves[['id', 'ref_pengajuan_kerjasama', 'tahun', 'triwulan']], 
         df_m_mitra[['ref_pengajuan_kerjasama', 'ref_mitra']], 
         on='ref_pengajuan_kerjasama', 
         how='inner'
@@ -74,9 +75,9 @@ def analisis_hirarki_otomatis():
     # =======================================================
     # 5. AGREGASI & OUTPUT
     # =======================================================
-    # Menghitung jumlah 'Aktivitas Kerja Sama Aktif' per Tahun
-    hasil = df_final.groupby('tahun').size().reset_index(name='jumlah_dokumen_aktif')
-    hasil = hasil.sort_values(by='tahun').reset_index(drop=True)
+    # Menghitung jumlah 'Aktivitas Kerja Sama Aktif' per Tahun dan Triwulan
+    hasil = df_final.groupby(['tahun', 'triwulan']).size().reset_index(name='jumlah_dokumen_aktif')
+    hasil = hasil.sort_values(by=['tahun', 'triwulan']).reset_index(drop=True)
     
     return hasil
 
