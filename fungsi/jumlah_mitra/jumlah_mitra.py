@@ -1,25 +1,33 @@
 import pandas as pd
 import os
 import warnings
+from pathlib import Path
 
 warnings.filterwarnings('ignore')
 
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent          # d:\repos\kerjasama
+DATA_DIR = str(PROJECT_ROOT / "data")
+OUTPUT_CSV = str(SCRIPT_DIR / "jumlah_mitra_per_triwulan.csv")
+
+
 def get_df_by_pattern(folder, pattern):
-    """Mencari file di folder secara dinamis (mendukung subfolder /data atau folder saat ini)."""
-    search_paths = [folder, '.']
-    for path in search_paths:
-        if os.path.exists(path):
-            for file in os.listdir(path):
-                if pattern.lower() in file.lower() and file.endswith('.csv'):
-                    return pd.read_csv(os.path.join(path, file))
+    """Mencari file di folder secara dinamis."""
+    if os.path.exists(folder):
+        for file in os.listdir(folder):
+            if pattern.lower() in file.lower() and file.endswith('.csv'):
+                return pd.read_csv(os.path.join(folder, file))
     return None
 
 def analisis_hirarki_otomatis():
     print("Menganalisis hirarki otomatis berdasarkan relasi ref_mou...")
     
     # 1. Muat Tabel Utama
-    df_dokumen = get_df_by_pattern('data', 'T_dokumen_kerjasama')
-    df_m_mitra = get_df_by_pattern('data', 'M_mitra_bekerjasama')
+    df_dokumen = get_df_by_pattern(DATA_DIR, 'T_dokumen_kerjasama')
+    df_m_mitra = get_df_by_pattern(DATA_DIR, 'M_mitra_bekerjasama')
 
     if df_dokumen is None or df_m_mitra is None:
         print("[Error] Gagal menemukan tabel utama. Pastikan file CSV ada di folder /data.")
@@ -92,3 +100,7 @@ if __name__ == "__main__":
         print("Logika: Hanya menghitung dokumen yang tidak memiliki ")
         print("        turunan (anak) di kolom ref_mou.")
         print("="*50)
+
+        # Simpan ke CSV
+        hasil_akhir.to_csv(OUTPUT_CSV, index=False, encoding='utf-8-sig')
+        print(f"\n[OK] CSV berhasil disimpan: {OUTPUT_CSV}")

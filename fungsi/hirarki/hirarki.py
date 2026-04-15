@@ -2,8 +2,18 @@ import pandas as pd
 import os
 import webbrowser
 import warnings
+from pathlib import Path
 
 warnings.filterwarnings('ignore')
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent          # d:\repos\kerjasama
+DATA_DIR = str(PROJECT_ROOT / "data")
+OUTPUT_HTML = str(SCRIPT_DIR / "debug_hirarki_2025.html")
+
 
 def get_df_by_pattern(folder, pattern):
     """Mencari file di folder /data secara dinamis."""
@@ -14,14 +24,13 @@ def get_df_by_pattern(folder, pattern):
     return None
 
 def debug_hirarki_2025_interaktif():
-    folder_data = 'data'
     print("Sedang menyiapkan tabel interaktif...")
 
     # 1. Muat Tabel
-    df_dokumen = get_df_by_pattern(folder_data, 'T_dokumen_kerjasama')
-    df_pengajuan = get_df_by_pattern(folder_data, 'T_pengajuan_kerjasama')
-    df_m_mitra = get_df_by_pattern(folder_data, 'M_mitra_bekerjasama')
-    df_mitra = get_df_by_pattern(folder_data, 'T_mitra')
+    df_dokumen = get_df_by_pattern(DATA_DIR, 'T_dokumen_kerjasama')
+    df_pengajuan = get_df_by_pattern(DATA_DIR, 'T_pengajuan_kerjasama')
+    df_m_mitra = get_df_by_pattern(DATA_DIR, 'M_mitra_bekerjasama')
+    df_mitra = get_df_by_pattern(DATA_DIR, 'T_mitra')
 
     if any(df is None for df in [df_dokumen, df_pengajuan, df_m_mitra, df_mitra]):
         print("[Error] File CSV tidak lengkap di folder /data.")
@@ -94,12 +103,11 @@ def debug_hirarki_2025_interaktif():
     </html>
     """
 
-    filename = "debug_hirarki_2025.html"
-    with open(filename, "w", encoding="utf-8") as f:
+    with open(OUTPUT_HTML, "w", encoding="utf-8") as f:
         f.write(full_html)
     
-    file_path = "file://" + os.path.abspath(filename)
-    print(f"Berhasil! Membuka browser: {filename}")
+    file_path = "file://" + os.path.abspath(OUTPUT_HTML)
+    print(f"Berhasil! Membuka browser: {OUTPUT_HTML}")
     webbrowser.open(file_path)
 
 if __name__ == "__main__":

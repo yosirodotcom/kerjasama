@@ -1,7 +1,20 @@
 import pandas as pd
 import os
+import webbrowser
+from pathlib import Path
 
-def load_and_merge_data(data_dir='data'):
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent          # d:\repos\kerjasama
+DATA_DIR = str(PROJECT_ROOT / "data")
+OUTPUT_HTML = str(SCRIPT_DIR / "tabel_mitra_interaktif.html")
+OUTPUT_EXCEL = str(SCRIPT_DIR / "hasil_analisis_mitra_distinct.xlsx")
+OUTPUT_CSV = str(SCRIPT_DIR / "hasil_analisis_mitra_distinct.csv")
+
+
+def load_and_merge_data(data_dir):
     # Load semua tabel yang dibutuhkan
     df_mitra = pd.read_csv(os.path.join(data_dir, 'T_mitra - T_mitra.csv'))
     df_person = pd.read_csv(os.path.join(data_dir, 'T_person - T_person.csv'))
@@ -180,13 +193,21 @@ def print_semua_semester(df_distinct):
     
     print(df_export[kolom_tampil])
 
-def export_to_excel(df_distinct, output_file='hasil_analisis_mitra_distinct.xlsx'):
+def export_to_excel(df_distinct, output_file=None):
+    if output_file is None:
+        output_file = OUTPUT_EXCEL
     df_distinct.to_excel(output_file, index=True)
     print(f'\n[OK] Data berhasil diekspor ke: {output_file}')
 
-def export_to_interactive_html(df_distinct, output_file='tabel_interaktif.html'):
-    import webbrowser
-    import os
+def export_to_csv(df_distinct, output_file=None):
+    if output_file is None:
+        output_file = OUTPUT_CSV
+    df_distinct.to_csv(output_file, index=True, encoding='utf-8-sig')
+    print(f'[OK] CSV berhasil disimpan: {output_file}')
+
+def export_to_interactive_html(df_distinct, output_file=None):
+    if output_file is None:
+        output_file = OUTPUT_HTML
     
     df_export = df_distinct.copy()
     
@@ -265,7 +286,7 @@ def export_to_interactive_html(df_distinct, output_file='tabel_interaktif.html')
             </div>
             
             <div class="mt-8 pt-6 border-t border-slate-100 text-center text-sm text-slate-400">
-                Dibuat otomatis menggunakan Python, Pandas & DataTables
+                Dibuat otomatis menggunakan Python, Pandas &amp; DataTables
             </div>
         </div>
 
@@ -420,23 +441,20 @@ def export_to_interactive_html(df_distinct, output_file='tabel_interaktif.html')
     webbrowser.open(absolute_path)
 
 if __name__ == '__main__':
-    data_dir = 'data'
-    
     print("Memproses data, mohon tunggu...")
     
     # 1. Load dan Merge data
-    df_merged = load_and_merge_data(data_dir=data_dir)
+    df_merged = load_and_merge_data(data_dir=DATA_DIR)
     
     # 2. Proses kolom distinct (Cakupan, Aktif/Tidak, dsb)
     df_distinct = process_distinct_dokumen(df_merged)
     
     # === PENGATURAN TAMPILAN ===
-    # Ubah True/False di bawah untuk mengatur bagian mana yang mau di print
-    
-    TAMPILKAN_SEMUA_SEMESTER = False   # Print di terminal
+    TAMPILKAN_SEMUA_SEMESTER = False
     TAMPILKAN_STATISTIK = True
     EXPORT_KE_EXCEL = False
-    TAMPILKAN_HTML_INTERAKTIF = True     # Buka di browser
+    EXPORT_KE_CSV = True
+    TAMPILKAN_HTML_INTERAKTIF = True
     
     if TAMPILKAN_SEMUA_SEMESTER:
         print_semua_semester(df_distinct)
@@ -446,6 +464,9 @@ if __name__ == '__main__':
         
     if EXPORT_KE_EXCEL:
         export_to_excel(df_distinct)
+
+    if EXPORT_KE_CSV:
+        export_to_csv(df_distinct)
         
     if TAMPILKAN_HTML_INTERAKTIF:
         export_to_interactive_html(df_distinct)
