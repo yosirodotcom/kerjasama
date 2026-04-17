@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Dokumen Kerjasama</title>
-    <meta name="description" content="Laporan interaktif dokumen kerjasama berdasarkan data pengajuan dan mitra.">
+    <title>Analisis Brutal – Verifikasi Nomor Dokumen</title>
+    <meta name="description" content="Laporan analisis brutal: verifikasi nomor dokumen kerjasama terhadap isi PDF.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -33,6 +33,10 @@
             from { opacity: 0; transform: translateY(16px); }
             to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 8px rgba(99, 102, 241, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); }
+        }
         .animate-row { animation: fadeInUp .3s ease-out forwards; opacity: 0; }
         .glass {
             background: rgba(15, 23, 42, 0.65);
@@ -51,30 +55,107 @@
         .sort-btn { cursor: pointer; user-select: none; white-space: nowrap; }
         .sort-btn:hover { color: #a5b4fc; }
         .sort-indicator { font-size: 0.65rem; margin-left: 4px; opacity: 0.6; }
-        input:focus { box-shadow: 0 0 0 2px rgba(99,102,241,.35); }
+        input:focus, select:focus { box-shadow: 0 0 0 2px rgba(99,102,241,.35); }
+        .badge-true {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600;
+            background: rgba(34, 197, 94, 0.15); color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+        .badge-false {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600;
+            background: rgba(239, 68, 68, 0.15); color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .stat-card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 12px;
+            padding: 16px 20px;
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            border-color: rgba(99, 102, 241, 0.35);
+            transform: translateY(-2px);
+        }
+        .progress-bar-bg {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 999px;
+            height: 8px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 1s ease-out;
+        }
+        .filter-chip {
+            padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;
+            cursor: pointer; transition: all 0.2s;
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            background: transparent; color: #94a3b8;
+        }
+        .filter-chip:hover { border-color: rgba(99, 102, 241, 0.5); color: #c7d2fe; }
+        .filter-chip.active {
+            background: rgba(99, 102, 241, 0.15); color: #818cf8;
+            border-color: rgba(99, 102, 241, 0.4);
+        }
     </style>
 </head>
 <body class="bg-surface-900 text-slate-200 font-sans min-h-screen antialiased">
 
     <!-- Header -->
     <header class="sticky top-0 z-50 glass">
-        <div class="max-w-[1600px] mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between">
             <div>
-                <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-accent-400 to-purple-400 bg-clip-text text-transparent">
-                    📄 Laporan Dokumen Kerjasama
+                <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-red-400 via-accent-400 to-purple-400 bg-clip-text text-transparent">
+                    🔍 Analisis Brutal – Verifikasi Dokumen
                 </h1>
                 <p class="text-xs text-slate-400 mt-0.5">Dibuat: <span id="generated-at">__GENERATED_AT__</span></p>
             </div>
-            <div class="flex items-center gap-4">
-                <span id="row-count" class="text-xs bg-accent-500/15 text-accent-400 px-3 py-1.5 rounded-full font-semibold">
+            <div class="flex items-center gap-3">
+                <span class="text-xs bg-accent-500/15 text-accent-400 px-3 py-1.5 rounded-full font-semibold">
                     __TOTAL_ROWS__ data
                 </span>
             </div>
         </div>
     </header>
 
+    <!-- Stats Cards -->
+    <div class="max-w-[1800px] mx-auto px-6 mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Total -->
+        <div class="stat-card">
+            <p class="text-xs text-slate-500 uppercase tracking-wider font-medium">Total Dokumen</p>
+            <p class="text-2xl font-bold text-slate-100 mt-1">__TOTAL_ROWS__</p>
+            <p class="text-xs text-slate-500 mt-1">dari laporan_pengajuan.csv</p>
+        </div>
+        <!-- Sesuai -->
+        <div class="stat-card">
+            <p class="text-xs text-green-500/80 uppercase tracking-wider font-medium">✓ Sesuai</p>
+            <p class="text-2xl font-bold text-green-400 mt-1" id="stat-true">__COUNT_TRUE__</p>
+            <div class="progress-bar-bg mt-2">
+                <div class="progress-bar-fill bg-gradient-to-r from-green-500 to-emerald-400" id="bar-true" style="width:0%"></div>
+            </div>
+        </div>
+        <!-- Tidak Sesuai -->
+        <div class="stat-card">
+            <p class="text-xs text-red-500/80 uppercase tracking-wider font-medium">✗ Tidak Sesuai</p>
+            <p class="text-2xl font-bold text-red-400 mt-1" id="stat-false">__COUNT_FALSE__</p>
+            <div class="progress-bar-bg mt-2">
+                <div class="progress-bar-fill bg-gradient-to-r from-red-500 to-rose-400" id="bar-false" style="width:0%"></div>
+            </div>
+        </div>
+        <!-- Waktu -->
+        <div class="stat-card">
+            <p class="text-xs text-slate-500 uppercase tracking-wider font-medium">⏱ Waktu Proses</p>
+            <p class="text-2xl font-bold text-accent-400 mt-1">__ELAPSED__<span class="text-sm font-normal text-slate-500"> detik</span></p>
+            <p class="text-xs text-slate-500 mt-1">total waktu analisis</p>
+        </div>
+    </div>
+
     <!-- Toolbar -->
-    <div class="max-w-[1600px] mx-auto px-6 mt-6 mb-4 flex flex-wrap gap-3 items-center">
+    <div class="max-w-[1800px] mx-auto px-6 mt-6 mb-4 flex flex-wrap gap-3 items-center">
         <div class="relative flex-1 min-w-[260px]">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -86,43 +167,47 @@
                 class="w-full pl-10 pr-4 py-2.5 rounded-lg bg-surface-800 border border-slate-700/60 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-accent-500 transition"
             >
         </div>
+
+        <!-- Filter chips -->
+        <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">Semua</button>
+        <button class="filter-chip" data-filter="true" onclick="setFilter('true')">✓ Sesuai</button>
+        <button class="filter-chip" data-filter="false" onclick="setFilter('false')">✗ Tidak Sesuai</button>
+        <button class="filter-chip" data-filter="empty" onclick="setFilter('empty')">⚠ Tanpa no_dok</button>
+
         <button id="btn-reset" class="px-4 py-2.5 rounded-lg bg-surface-800 border border-slate-700/60 text-xs text-slate-400 hover:text-accent-400 hover:border-accent-500/40 transition">
-            Reset Filter
+            Reset
         </button>
         <span id="filtered-count" class="text-xs text-slate-500">Menampilkan semua</span>
     </div>
 
     <!-- Table Container -->
-    <main class="max-w-[1600px] mx-auto px-6 pb-16">
+    <main class="max-w-[1800px] mx-auto px-6 pb-16">
         <div class="rounded-xl overflow-hidden border border-slate-700/40 glass">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="bg-surface-800/80 border-b border-slate-700/50">
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-12">#</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="nomor_dokumen">
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-10">#</th>
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="nomor_dokumen">
                                 Nomor Dokumen<span class="sort-indicator"></span>
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="tanggal_penetapan">
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="no_dok">
+                                No Dok (PDF)<span class="sort-indicator"></span>
+                            </th>
+                            <th class="px-3 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="sesuai">
+                                Sesuai<span class="sort-indicator"></span>
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                Link
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="tanggal_penetapan">
                                 Tgl Penetapan<span class="sort-indicator"></span>
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                                Link Dokumen
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="tanggal_pengajuan">
-                                Tgl Pengajuan<span class="sort-indicator"></span>
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="tentang">
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="tentang">
                                 Tentang<span class="sort-indicator"></span>
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="nama_mitra">
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="nama_mitra">
                                 Nama Mitra<span class="sort-indicator"></span>
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="NODOK">
-                                NODOK<span class="sort-indicator"></span>
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="MATCH_NUMBER">
-                                MATCH NUMBER<span class="sort-indicator"></span>
                             </th>
                         </tr>
                     </thead>
@@ -140,6 +225,7 @@
                     <option value="50" selected>50</option>
                     <option value="100">100</option>
                     <option value="500">500</option>
+                    <option value="9999">Semua</option>
                 </select>
             </div>
             <div class="flex items-center gap-1" id="pagination-controls"></div>
@@ -160,6 +246,7 @@ let currentPage = 1;
 let pageSize = 50;
 let sortKey = null;
 let sortAsc = true;
+let activeFilter = 'all';
 
 // ──────────────────────────────────────────────
 // DOM References
@@ -187,6 +274,65 @@ function parseDateStr(d) {
 }
 
 // ──────────────────────────────────────────────
+// Stats animation
+// ──────────────────────────────────────────────
+function animateStats() {
+    const total = RAW_DATA.length || 1;
+    const trueCount = RAW_DATA.filter(r => r.sesuai === 'TRUE').length;
+    const falseCount = RAW_DATA.filter(r => r.sesuai === 'FALSE').length;
+
+    // Animate progress bars after a short delay
+    setTimeout(() => {
+        const barTrue = document.getElementById('bar-true');
+        const barFalse = document.getElementById('bar-false');
+        if (barTrue) barTrue.style.width = ((trueCount / total) * 100).toFixed(1) + '%';
+        if (barFalse) barFalse.style.width = ((falseCount / total) * 100).toFixed(1) + '%';
+    }, 300);
+}
+
+// ──────────────────────────────────────────────
+// Filter by sesuai status
+// ──────────────────────────────────────────────
+function setFilter(filter) {
+    activeFilter = filter;
+    // Update chip styles
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.filter === filter);
+    });
+    applyFilters();
+}
+
+function applyFilters() {
+    const q = searchInput.value.toLowerCase().trim();
+    let data = [...RAW_DATA];
+
+    // Apply status filter
+    if (activeFilter === 'true') {
+        data = data.filter(r => r.sesuai === 'TRUE');
+    } else if (activeFilter === 'false') {
+        data = data.filter(r => r.sesuai === 'FALSE');
+    } else if (activeFilter === 'empty') {
+        data = data.filter(r => !r.no_dok);
+    }
+
+    // Apply search filter
+    if (q) {
+        data = data.filter(r =>
+            (r.nomor_dokumen||'').toLowerCase().includes(q) ||
+            (r.no_dok||'').toLowerCase().includes(q) ||
+            (r.tentang||'').toLowerCase().includes(q) ||
+            (r.nama_mitra||'').toLowerCase().includes(q) ||
+            (r.tanggal_penetapan||'').includes(q) ||
+            (r.tanggal_pengajuan||'').includes(q)
+        );
+    }
+
+    filteredData = data;
+    currentPage = 1;
+    renderTable();
+}
+
+// ──────────────────────────────────────────────
 // Rendering
 // ──────────────────────────────────────────────
 function renderTable() {
@@ -198,20 +344,29 @@ function renderTable() {
         const linkHtml = row.link_dokumen
             ? `<a href="${escapeHtml(row.link_dokumen)}" target="_blank" rel="noopener" class="link-pill">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                Buka
+                PDF
                </a>`
             : '<span class="text-slate-600 text-xs">—</span>';
 
-        return `<tr class="border-b border-slate-800/60 animate-row" style="animation-delay:${idx * 15}ms">
-            <td class="px-4 py-3 text-slate-500 text-xs font-mono">${globalIdx}</td>
-            <td class="px-4 py-3 font-medium text-slate-100">${escapeHtml(row.nomor_dokumen)}</td>
-            <td class="px-4 py-3 text-slate-300">${escapeHtml(row.tanggal_penetapan)}</td>
-            <td class="px-4 py-3">${linkHtml}</td>
-            <td class="px-4 py-3 text-slate-300">${escapeHtml(row.tanggal_pengajuan)}</td>
-            <td class="px-4 py-3 text-slate-300 max-w-xs truncate" title="${escapeHtml(row.tentang)}">${escapeHtml(row.tentang)}</td>
-            <td class="px-4 py-3 text-accent-400 font-medium">${escapeHtml(row.nama_mitra)}</td>
-            <td class="px-4 py-3 text-slate-300 font-mono">${escapeHtml(row.NODOK)}</td>
-            <td class="px-4 py-3 text-slate-300 font-mono">${escapeHtml(row.MATCH_NUMBER)}</td>
+        const sesuaiBadge = row.sesuai === 'TRUE'
+            ? '<span class="badge-true">✓ TRUE</span>'
+            : '<span class="badge-false">✗ FALSE</span>';
+
+        // Highlight no_dok if different from nomor_dokumen
+        const noDokClass = row.no_dok
+            ? (row.sesuai === 'TRUE' ? 'text-green-400' : 'text-red-400')
+            : 'text-slate-600 italic';
+        const noDokText = row.no_dok || '(tidak ditemukan)';
+
+        return `<tr class="border-b border-slate-800/60 animate-row" style="animation-delay:${idx * 12}ms">
+            <td class="px-3 py-3 text-slate-500 text-xs font-mono">${globalIdx}</td>
+            <td class="px-3 py-3 font-medium text-slate-100 whitespace-nowrap">${escapeHtml(row.nomor_dokumen)}</td>
+            <td class="px-3 py-3 ${noDokClass} font-mono text-xs whitespace-nowrap">${escapeHtml(noDokText)}</td>
+            <td class="px-3 py-3 text-center">${sesuaiBadge}</td>
+            <td class="px-3 py-3">${linkHtml}</td>
+            <td class="px-3 py-3 text-slate-300 whitespace-nowrap">${escapeHtml(row.tanggal_penetapan)}</td>
+            <td class="px-3 py-3 text-slate-300 max-w-xs truncate" title="${escapeHtml(row.tentang)}">${escapeHtml(row.tentang)}</td>
+            <td class="px-3 py-3 text-accent-400 font-medium">${escapeHtml(row.nama_mitra)}</td>
         </tr>`;
     }).join('');
 
@@ -230,10 +385,8 @@ function renderPagination() {
         ? 'px-3 py-1.5 rounded-md text-xs font-semibold bg-accent-500 text-white'
         : 'px-3 py-1.5 rounded-md text-xs text-slate-400 hover:bg-surface-700 hover:text-slate-200 transition';
 
-    // Prev
     html += `<button class="${btnClass(false)}" ${currentPage===1?'disabled':''} onclick="goPage(${currentPage-1})">‹</button>`;
 
-    // Pages (show max 7)
     let pages = [];
     if (totalPages <= 7) {
         for (let i = 1; i <= totalPages; i++) pages.push(i);
@@ -254,7 +407,6 @@ function renderPagination() {
     });
 
     html += `<button class="${btnClass(false)}" ${currentPage===totalPages?'disabled':''} onclick="goPage(${currentPage+1})">›</button>`;
-
     paginationControls.innerHTML = html;
 }
 
@@ -271,7 +423,6 @@ document.querySelectorAll('.sort-btn').forEach(th => {
             sortAsc = true;
         }
 
-        // Update indicators
         document.querySelectorAll('.sort-indicator').forEach(s => s.textContent = '');
         th.querySelector('.sort-indicator').textContent = sortAsc ? ' ▲' : ' ▼';
 
@@ -296,24 +447,15 @@ document.querySelectorAll('.sort-btn').forEach(th => {
 let debounceTimer;
 searchInput.addEventListener('input', () => {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-        const q = searchInput.value.toLowerCase().trim();
-        filteredData = q
-            ? RAW_DATA.filter(r =>
-                (r.nomor_dokumen||'').toLowerCase().includes(q) ||
-                (r.tentang||'').toLowerCase().includes(q) ||
-                (r.nama_mitra||'').toLowerCase().includes(q) ||
-                (r.tanggal_penetapan||'').includes(q) ||
-                (r.tanggal_pengajuan||'').includes(q)
-              )
-            : [...RAW_DATA];
-        currentPage = 1;
-        renderTable();
-    }, 200);
+    debounceTimer = setTimeout(() => applyFilters(), 200);
 });
 
 btnReset.addEventListener('click', () => {
     searchInput.value = '';
+    activeFilter = 'all';
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.filter === 'all');
+    });
     filteredData = [...RAW_DATA];
     sortKey = null;
     sortAsc = true;
@@ -338,6 +480,7 @@ function goPage(p) {
 // ──────────────────────────────────────────────
 // Init
 // ──────────────────────────────────────────────
+animateStats();
 renderTable();
 </script>
 
