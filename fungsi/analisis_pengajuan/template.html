@@ -124,6 +124,12 @@
                             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="MATCH_NUMBER">
                                 MATCH NUMBER<span class="sort-indicator"></span>
                             </th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="tentang_2">
+                                Tentang 2<span class="sort-indicator"></span>
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider sort-btn" data-sort="tanggal_penetapan_2">
+                                Tgl Penetapan 2<span class="sort-indicator"></span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="table-body"></tbody>
@@ -212,6 +218,8 @@ function renderTable() {
             <td class="px-4 py-3 text-accent-400 font-medium">${escapeHtml(row.nama_mitra)}</td>
             <td class="px-4 py-3 text-slate-300 font-mono">${escapeHtml(row.NODOK)}</td>
             <td class="px-4 py-3 text-slate-300 font-mono">${escapeHtml(row.MATCH_NUMBER)}</td>
+            <td class="px-4 py-3 text-slate-300 max-w-xs truncate" title="${escapeHtml(row.tentang_2)}">${escapeHtml(row.tentang_2)}</td>
+            <td class="px-4 py-3 text-slate-300">${escapeHtml(row.tanggal_penetapan_2)}</td>
         </tr>`;
     }).join('');
 

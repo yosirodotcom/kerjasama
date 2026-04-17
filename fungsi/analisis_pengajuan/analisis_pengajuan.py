@@ -105,6 +105,8 @@ def merge_data(df_dokumen, df_pengajuan, df_mitra, df_m_mitra):
     # Tambahkan kolom NODOK dan MATCH_NUMBER
     result["NODOK"] = ""
     result["MATCH_NUMBER"] = ""
+    result["tentang_2"] = ""
+    result["tanggal_penetapan_2"] = ""
 
     return result
 
