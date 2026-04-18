@@ -9,8 +9,8 @@ puppeteer.use(StealthPlugin());
 // ================= PENGATURAN UTAMA =================
 const FILE_MENTAH = 'laporan_pengajuan.csv';
 const FILE_TERUPDATE = 'laporan_pengajuan_terupdate.csv';
-const TARGET_SUCCESS = 500; // Jumlah row sukses yang diinginkan
-const MAKSIMAL_COBA = 3;   // Retry 3x jika gagal
+const TARGET_SUCCESS = 100;
+const MAKSIMAL_COBA = 3;
 const KOORDINAT_X = 1255;
 const KOORDINAT_Y = 545;
 
@@ -44,9 +44,12 @@ async function simpanCSV(filePath, data) {
     await csvWriter.writeRecords(data);
 }
 
+// Fungsi Ekstraktor
 async function ekstrakSatuDokumen(page, url) {
     return new Promise(async (resolve) => {
         let isResolved = false;
+
+        // Timeout 50 detik
         const timeoutId = setTimeout(() => {
             if (!isResolved) {
                 isResolved = true;
@@ -95,6 +98,36 @@ async function ekstrakSatuDokumen(page, url) {
 
         try {
             await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+            // =========================================================
+            // FITUR BARU: Deteksi Tombol Login Kapan Pun Muncul
+            // Menggunakan selector dari elemen HTML yang Anda temukan
+            // =========================================================
+            const butuhLogin = await page.$('a[href*="ServiceLogin"]');
+            if (butuhLogin) {
+                console.log("\n=======================================================");
+                console.log("⚠️  Sesi terputus atau Anda belum login!");
+                console.log("👨‍💻  Silakan klik tombol 'Login' di Chrome dan masuk ke akun Google Anda.");
+                console.log("⏳  Script ini menjeda otomatis. Menunggu Anda selesai login...");
+                console.log("=======================================================\n");
+
+                // Menahan proses SELAMANYA sampai tombol login itu hilang dari layar
+                await page.waitForFunction(() => {
+                    return !document.querySelector('a[href*="ServiceLogin"]');
+                }, { timeout: 0 }); // timeout 0 = tidak akan error meski ditunggu berjam-jam
+
+                console.log("✅ Berhasil login! Melanjutkan proses...");
+
+                // Jika URL berubah setelah login, kita harus kembali ke URL dokumen
+                if (!page.url().includes(url)) {
+                    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+                } else {
+                    await page.reload({ waitUntil: 'domcontentloaded' });
+                }
+                await new Promise(r => setTimeout(r, 4000));
+            }
+            // =========================================================
+
             const xpathTombol = '::-p-xpath(//*[contains(text(), "Ask Gemini")])';
             const tombolGemini = await page.waitForSelector(xpathTombol, { timeout: 15000 });
             await page.evaluate(el => el.click(), tombolGemini);
@@ -132,7 +165,7 @@ async function ekstrakSatuDokumen(page, url) {
 
 // ================= ALUR KERJA UTAMA =================
 async function mulaiBatchProses() {
-    console.log("=== SISTEM OTOMASI KEMITRAAN STRATEGIS (MODE RETRY GAGAL) ===");
+    console.log("=== SISTEM OTOMASI KEMITRAAN STRATEGIS ===");
 
     let dataLaporan = await bacaCSV(FILE_TERUPDATE);
     let sumber = FILE_TERUPDATE;
@@ -164,10 +197,6 @@ async function mulaiBatchProses() {
         let row = dataLaporan[i];
 
         const isiNodok = (row['NODOK'] || "").trim().toLowerCase();
-
-        // =========================================================
-        // LOGIKA FILTER BARU: Proses jika kosong ATAU tertulis "gagal"
-        // =========================================================
         const perluDiproses = isiNodok === "" || isiNodok === "gagal";
 
         if (!perluDiproses) {
@@ -190,7 +219,7 @@ async function mulaiBatchProses() {
             if (hasilEkstraksi.nodok !== "gagal") break;
 
             if (percobaan < MAKSIMAL_COBA) {
-                console.log(`   🔄 Gagal, mencoba kembali dalam 3 detik...`);
+                console.log(`   🔄 Gagal mengekstrak, mencoba kembali dalam 3 detik...`);
                 await new Promise(r => setTimeout(r, 3000));
             }
         }
