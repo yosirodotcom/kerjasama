@@ -23,6 +23,12 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
+# Import data_handler
+import sys
+# Add project root to sys.path so we can import data_handler
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
+import data_handler
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -33,11 +39,11 @@ TEMPLATE_PATH = SCRIPT_DIR / "template.html"
 OUTPUT_PATH = SCRIPT_DIR / "laporan_pengajuan.html"
 OUTPUT_CSV = SCRIPT_DIR / "laporan_pengajuan.csv"
 
-# CSV file names
-CSV_DOKUMEN = DATA_DIR / "T_dokumen_kerjasama - T_dokumen_kerjasama.csv"
-CSV_PENGAJUAN = DATA_DIR / "T_pengajuan_kerjasama - T_pengajuan_kerjasama.csv"
-CSV_MITRA = DATA_DIR / "T_mitra - T_mitra.csv"
-CSV_M_MITRA = DATA_DIR / "M_mitra_bekerjasama - M_mitra_bekerjasama.csv"
+# CSV file names (updated to match data_handler output)
+CSV_DOKUMEN = DATA_DIR / "T_dokumen_kerjasama.csv"
+CSV_PENGAJUAN = DATA_DIR / "T_pengajuan_kerjasama.csv"
+CSV_MITRA = DATA_DIR / "T_mitra.csv"
+CSV_M_MITRA = DATA_DIR / "M_mitra_bekerjasama.csv"
 
 
 def load_data():
@@ -154,6 +160,9 @@ def save_csv(df):
 
 
 def main():
+    print("[0/4] Memperbarui data dari Google Sheets...")
+    data_handler.download_all_sheets(str(DATA_DIR))
+
     print("[1/4] Memuat data CSV...")
     df_dokumen, df_pengajuan, df_mitra, df_m_mitra = load_data()
 

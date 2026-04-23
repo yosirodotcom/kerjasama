@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import webbrowser
 from pathlib import Path
+import sys
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -13,14 +14,17 @@ OUTPUT_HTML = str(SCRIPT_DIR / "tabel_mitra_interaktif.html")
 OUTPUT_EXCEL = str(SCRIPT_DIR / "hasil_analisis_mitra_distinct.xlsx")
 OUTPUT_CSV = str(SCRIPT_DIR / "hasil_analisis_mitra_distinct.csv")
 
+# Add project root to sys.path and import data_handler
+sys.path.append(str(PROJECT_ROOT))
+import data_handler
 
 def load_and_merge_data(data_dir):
     # Load semua tabel yang dibutuhkan
-    df_mitra = pd.read_csv(os.path.join(data_dir, 'T_mitra - T_mitra.csv'))
-    df_person = pd.read_csv(os.path.join(data_dir, 'T_person - T_person.csv'))
-    df_dokumen = pd.read_csv(os.path.join(data_dir, 'T_dokumen_kerjasama - T_dokumen_kerjasama.csv'))
-    df_mapping_mitra = pd.read_csv(os.path.join(data_dir, 'M_mitra_bekerjasama - M_mitra_bekerjasama.csv'))
-    df_pengajuan = pd.read_csv(os.path.join(data_dir, 'T_pengajuan_kerjasama - T_pengajuan_kerjasama.csv'))
+    df_mitra = pd.read_csv(os.path.join(data_dir, 'T_mitra.csv'))
+    df_person = pd.read_csv(os.path.join(data_dir, 'T_person.csv'))
+    df_dokumen = pd.read_csv(os.path.join(data_dir, 'T_dokumen_kerjasama.csv'))
+    df_mapping_mitra = pd.read_csv(os.path.join(data_dir, 'M_mitra_bekerjasama.csv'))
+    df_pengajuan = pd.read_csv(os.path.join(data_dir, 'T_pengajuan_kerjasama.csv'))
 
     # Bersihkan T_dokumen_kerjasama yang tidak punya referensi pengajuan
     df_dokumen = df_dokumen[df_dokumen['ref_pengajuan_kerjasama'].notna() & (df_dokumen['ref_pengajuan_kerjasama'].str.strip() != '')].copy()
@@ -441,6 +445,9 @@ def export_to_interactive_html(df_distinct, output_file=None):
     webbrowser.open(absolute_path)
 
 if __name__ == '__main__':
+    print("Memperbarui data dari Google Sheets, mohon tunggu...")
+    data_handler.download_all_sheets(DATA_DIR)
+    
     print("Memproses data, mohon tunggu...")
     
     # 1. Load dan Merge data

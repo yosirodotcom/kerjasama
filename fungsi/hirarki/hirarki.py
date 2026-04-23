@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import webbrowser
 import warnings
+import sys
 from pathlib import Path
 
 warnings.filterwarnings('ignore')
@@ -13,6 +14,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent          # d:\repos\kerjasama
 DATA_DIR = str(PROJECT_ROOT / "data")
 OUTPUT_HTML = str(SCRIPT_DIR / "debug_hirarki_2025.html")
+
+# Add project root to sys.path and import data_handler
+sys.path.append(str(PROJECT_ROOT))
+import data_handler
 
 
 def get_df_by_pattern(folder, pattern):
@@ -111,4 +116,6 @@ def debug_hirarki_2025_interaktif():
     webbrowser.open(file_path)
 
 if __name__ == "__main__":
+    print("Memperbarui data dari Google Sheets, mohon tunggu...")
+    data_handler.download_all_sheets(DATA_DIR)
     debug_hirarki_2025_interaktif()

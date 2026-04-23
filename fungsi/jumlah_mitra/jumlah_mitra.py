@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import warnings
+import sys
 from pathlib import Path
 
 warnings.filterwarnings('ignore')
@@ -12,6 +13,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent          # d:\repos\kerjasama
 DATA_DIR = str(PROJECT_ROOT / "data")
 OUTPUT_CSV = str(SCRIPT_DIR / "jumlah_mitra_per_triwulan.csv")
+
+# Add project root to sys.path and import data_handler
+sys.path.append(str(PROJECT_ROOT))
+import data_handler
 
 
 def get_df_by_pattern(folder, pattern):
@@ -90,6 +95,8 @@ def analisis_hirarki_otomatis():
     return hasil
 
 if __name__ == "__main__":
+    print("Memperbarui data dari Google Sheets, mohon tunggu...")
+    data_handler.download_all_sheets(DATA_DIR)
     hasil_akhir = analisis_hirarki_otomatis()
     if hasil_akhir is not None:
         print("\n" + "="*50)
