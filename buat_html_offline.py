@@ -106,17 +106,17 @@ def generate():
     print(f"Total dokumen unik: {len(records)}")
     json_data = json.dumps(records, ensure_ascii=False)
 
-    # Read inlined vendor scripts for true offline support
+    # Read inlined vendor assets for true offline support
     vendor_dir = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(vendor_dir, 'vendor_tailwind.js'), 'r', encoding='utf-8') as f:
-        tailwind_js = f.read()
+    with open(os.path.join(vendor_dir, 'vendor_tailwind.css'), 'r', encoding='utf-8') as f:
+        tailwind_css = f.read()
     with open(os.path.join(vendor_dir, 'vendor_vue.js'), 'r', encoding='utf-8') as f:
         vue_js = f.read()
 
     html = r"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tabel Dokumen Kerja Sama</title>
-<script>__TAILWIND_JS__</script>
+<style>__TAILWIND_CSS__</style>
 <script>__VUE_JS__</script>
 <style>
 body{background-color:#020617;color:#f1f5f9;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
@@ -252,7 +252,7 @@ else{this.sortConfig.key=k;this.sortConfig.direction='asc'}}}
 }).mount('#app')
 </script></body></html>"""
 
-    html = html.replace('__TAILWIND_JS__', tailwind_js)
+    html = html.replace('__TAILWIND_CSS__', tailwind_css)
     html = html.replace('__VUE_JS__', vue_js)
     html = html.replace('__JSON_DATA__', json_data)
 
