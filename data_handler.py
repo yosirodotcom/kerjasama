@@ -63,8 +63,8 @@ def download_all_sheets(download_dir="data", progress_callback=None):
                 filename += '.csv'
 
             filepath = os.path.join(download_dir, filename)
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(res.text)
+            with open(filepath, 'wb') as f:
+                f.write(res.content)
                 
             if progress_callback:
                 # pass progress percentage (0.0 to 1.0) and the name of file downloaded
