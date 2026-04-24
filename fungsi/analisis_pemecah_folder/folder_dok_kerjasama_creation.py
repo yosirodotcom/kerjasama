@@ -24,14 +24,62 @@ def buat_tabel_dokumen_kustom(data_dir=None):
                   left_on='ref_pengajuan_kerjasama', right_on='id', 
                   how='left', suffixes=('', '_tpk'))
 
-    # 3. Join T_dokumen_kerjasama ke T_kegiatan (melalui mapping M_kegiatan_kerjasama)
-    # Langkah A: T_kegiatan di-join dengan mapping
-    df_mkk = pd.merge(mkk, tkeg[['id', 'wilayah_kerjasama', 'kategori_kegiatan']], 
-                      left_on='ref_kegiatan', right_on='id', how='left')
+    # 3. Join T_dokumen_kerjasama ke T_kegiatan (Dua sumber: Direct link & Junction table)
+    # Bersihkan data kegiatan agar ID unik
+    tkeg_min = tkeg[['id', 'wilayah_kerjasama', 'kategori_kegiatan']].drop_duplicates(subset=['id'])
+    tkeg_min = tkeg_min[tkeg_min['id'].notna()]
     
-    # Langkah B: Gabungkan ke main dataframe
+    # Sumber A: Direct link di T_dokumen_kerjasama.ref_kegiatan
+    df = pd.merge(df, tkeg_min.rename(columns={'id': 'keg_id'}), 
+                  left_on='ref_kegiatan', right_on='keg_id', how='left')
+    
+    # Sumber B: Junction Table M_kegiatan_kerjasama (M_kegiatan_kerjasama)
+    df_mkk = pd.merge(mkk, tkeg_min, left_on='ref_kegiatan', right_on='id', how='left')
     df = pd.merge(df, df_mkk[['ref_dokumen_kerjasama', 'wilayah_kerjasama', 'kategori_kegiatan']], 
-                  left_on='id', right_on='ref_dokumen_kerjasama', how='left')
+                  left_on='id', right_on='ref_dokumen_kerjasama', how='left', suffixes=('', '_mkk'))
+
+    # Gabungkan data dari kedua sumber (Coalesce)
+    df['wilayah_kerjasama'] = df['wilayah_kerjasama'].fillna(df['wilayah_kerjasama_mkk'])
+    df['kategori_kegiatan'] = df['kategori_kegiatan'].fillna(df['kategori_kegiatan_mkk'])
+
+    # 3.5 Khusus MOU: Tentukan Wilayah berdasarkan data T_mitra jika masih kosong
+    try:
+        mmb = pd.read_csv(f"{data_dir}/M_mitra_bekerjasama.csv", dtype=str)
+        tmitra = pd.read_csv(f"{data_dir}/T_mitra.csv", dtype=str)
+        
+        # Ambil mitra pertama untuk setiap pengajuan (untuk menghindari duplikasi baris pengajuan)
+        mmb_min = mmb.drop_duplicates(subset=['ref_pengajuan_kerjasama'])
+        
+        # Join dengan data lokasi mitra
+        df_mitra = pd.merge(mmb_min, tmitra[['id', 'negara_mitra', 'provinsi_mitra']], 
+                            left_on='ref_mitra', right_on='id', how='left')
+        
+        # Gabungkan ke dataframe utama
+        df = pd.merge(df, df_mitra[['ref_pengajuan_kerjasama', 'negara_mitra', 'provinsi_mitra']], 
+                      left_on='ref_pengajuan_kerjasama', right_on='ref_pengajuan_kerjasama', how='left')
+        
+        # Fungsi logika penentuan wilayah khusus MOU
+        def tentukan_wilayah_mou(row):
+            jenis = str(row.get('jenis_dokumen', '')).upper()
+            wilayah_skrg = row.get('wilayah_kerjasama')
+            
+            # Hanya proses jika MOU dan Wilayah masih kosong/NaN
+            if 'MOU' in jenis and (pd.isna(wilayah_skrg) or str(wilayah_skrg).strip() == "" or str(wilayah_skrg) == 'nan'):
+                negara = str(row.get('negara_mitra', '')).upper().strip()
+                provinsi = str(row.get('provinsi_mitra', '')).upper().strip()
+                
+                if negara != 'INDONESIA' and negara != '' and negara != 'NAN':
+                    return 'INTERNASIONAL'
+                elif negara == 'INDONESIA':
+                    if 'KALIMANTAN BARAT' in provinsi:
+                        return 'LOKAL'
+                    else:
+                        return 'NASIONAL'
+            return wilayah_skrg
+
+        df['wilayah_kerjasama'] = df.apply(tentukan_wilayah_mou, axis=1)
+    except Exception as e:
+        print(f"Warning: Gagal memproses logika wilayah MOU: {e}")
 
     # 4. Siapkan Kolom Sesuai Permintaan
     df['Link Dokumen'] = df['link_dokumen']

@@ -24,6 +24,10 @@ from pathlib import Path
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 
+# Import AI Handler
+sys.path.append(str(PROJECT_ROOT))
+from ai_handler import ai_service
+
 # Fix Windows console encoding
 import sys
 if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
@@ -230,19 +234,36 @@ def process_row(idx: int, row: pd.Series, session: requests.Session, total: int)
         print(f"{prefix} [X] Gagal extract teks dari PDF")
         return {"no_dok": "", "sesuai": "FALSE"}
 
-    # Find PL16 number
-    no_dok = find_pl16_number(text)
+    # --- PROMPT CACHING INTEGRATION ---
+    sys_instruction = """Anda adalah asisten ekstraksi data dokumen hukum. 
+    Tugas Anda adalah mengekstrak 3 informasi dari teks PDF yang diberikan:
+    1. Nomor Dokumen: Cari yang mengandung '/PL16/'. Formatnya biasanya XXXX/PL16/XX/XXXX.
+    2. Tentang: Apa inti dari kerjasama ini (misal: Tridarma Perguruan Tinggi, Praktek Kerja Lapangan).
+    3. Tanggal Penetapan: Cari tanggal dokumen ditandatangani. WAJIB ubah ke format DD-MM-YYYY.
 
-    if not no_dok:
-        print(f"{prefix} [!] Tidak ditemukan nomor PL16 dalam PDF")
-        return {"no_dok": "", "sesuai": "FALSE"}
+    Jawab HANYA dengan format JSON:
+    {"no_dok": "...", "tentang": "...", "tanggal": "..."}"""
+
+    prompt = f"Ekstrak data dari teks PDF berikut:\n\n{text[:5000]}" # Ambil 5000 karakter pertama agar tidak terlalu panjang
+
+    ai_res = ai_service.ask(prompt, system_instruction=sys_instruction)
+    
+    try:
+        # Bersihkan jika ada markdown
+        clean_res = ai_res.replace("```json", "").replace("```", "").strip()
+        data = json.loads(clean_res)
+        no_dok = data.get("no_dok", "")
+        # Anda bisa menyimpan 'tentang' dan 'tanggal' juga jika kolomnya tersedia
+    except:
+        # Fallback ke regex lama jika AI gagal
+        no_dok = find_pl16_number(text)
 
     # Compare
     is_match = normalize_nomor(nomor_dokumen) == normalize_nomor(no_dok)
     status = "TRUE" if is_match else "FALSE"
     icon = "[OK]" if is_match else "[X]"
 
-    print(f"{prefix} {icon} nomor_dokumen='{nomor_dokumen}' | no_dok='{no_dok}' -> {status}")
+    print(f"{prefix} {icon} nomor_dokumen='{nomor_dokumen}' | AI_no_dok='{no_dok}' -> {status}")
     return {"no_dok": no_dok, "sesuai": status}
 
 

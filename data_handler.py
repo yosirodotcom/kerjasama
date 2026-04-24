@@ -8,9 +8,32 @@ import re
 import urllib.parse
 import os
 import glob
-import requests
-import urllib.parse
-import requests
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
+from googleapiclient.http import MediaIoBaseDownload
+
+def get_drive_service():
+    """Helper to initialize the Google Drive API service."""
+    SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+    # Use absolute path to the key file
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    creds_path = os.path.join(base_path, '.key', 'credentials.json')
+    
+    if not os.path.exists(creds_path):
+        # Fallback to project root relative path
+        creds_path = os.path.join('.key', 'credentials.json')
+
+    if not os.path.exists(creds_path):
+        print(f"Error: Credentials file not found at {creds_path}")
+        return None
+
+    try:
+        creds = service_account.Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+        service = build('drive', 'v3', credentials=creds)
+        return service
+    except Exception as e:
+        print(f"Error authenticating with Google: {e}")
+        return None
 
 def download_all_sheets(download_dir="data", progress_callback=None):
     urls = [
@@ -31,6 +54,11 @@ def download_all_sheets(download_dir="data", progress_callback=None):
     urls = list(dict.fromkeys(urls))
     os.makedirs(download_dir, exist_ok=True)
     
+    service = get_drive_service()
+    if not service:
+        print("Failed to initialize Google Drive service. Aborting download.")
+        return
+
     total = len(urls)
     for i, original_url in enumerate(urls):
         doc_id_match = re.search(r'/d/([^/]+)', original_url)
@@ -41,38 +69,46 @@ def download_all_sheets(download_dir="data", progress_callback=None):
         doc_id = doc_id_match.group(1)
         gid = gid_match.group(1) if gid_match else "0"
         
-        export_url = f"https://docs.google.com/spreadsheets/d/{doc_id}/export?format=csv&gid={gid}"
-        
         try:
-            res = requests.get(export_url)
-            res.raise_for_status()
+            # 1. Get file metadata to determine the filename
+            file_info = service.files().get(fileId=doc_id, fields='name').execute()
+            sheet_name = file_info.get('name', f"table_{gid}")
             
-            cd = res.headers.get('Content-Disposition', '')
-            matches = re.findall(r'filename\*?=UTF-8\'\'(.+?)$', cd)
-            if not matches:
-                matches = re.findall(r'filename=\"?([^\"]+)\"?', cd)
-                
-            filename = f"table_{gid}.csv"
-            if matches:
-                filename = urllib.parse.unquote(matches[0])
-                filename = filename.strip('"\'')
-                if " - " in filename:
-                    filename = filename.split(" - ")[-1]
-
+            # 2. Prepare filename (following existing logic)
+            filename = sheet_name
+            if " - " in filename:
+                filename = filename.split(" - ")[-1]
             if not filename.endswith('.csv'):
                 filename += '.csv'
-
+            
             filepath = os.path.join(download_dir, filename)
-            with open(filepath, 'wb') as f:
-                f.write(res.content)
+            
+            # 3. Request Export (MIME type for CSV)
+            # Note: Drive API export exports the first sheet by default.
+            request = service.files().export_media(
+                fileId=doc_id,
+                mimeType='text/csv'
+            )
+            
+            # 4. Execute Download
+            with io.FileIO(filepath, 'wb') as fh:
+                downloader = MediaIoBaseDownload(fh, request)
+                done = False
+                while done is False:
+                    status, done = downloader.next_chunk()
+                    if status and progress_callback:
+                        progress_callback((i + (status.progress())) / total, filename)
                 
             if progress_callback:
-                # pass progress percentage (0.0 to 1.0) and the name of file downloaded
                 progress_callback((i + 1) / total, filename)
+            else:
+                print(f"Downloaded: {filename}")
                 
         except Exception as e:
+            error_msg = f"Error downloading {original_url}: {e}"
+            print(error_msg)
             if progress_callback:
-                progress_callback((i + 1) / total, f"Error: {e}")
+                progress_callback((i + 1) / total, error_msg)
 
 def load_joined_data(data_dir="data"):
     # Load all required tables
@@ -305,32 +341,36 @@ def fetch_google_sheet_via_browser(url, download_dir="data"):
         driver.quit()
 
 def fetch_google_sheet_data(url):
-    """Fallback background download method (not used natively if browser is selected)"""
-    try:
-        if "/edit" in url:
-            export_url = url.replace("/edit", "/export?format=csv&gid=0")
-            base_url = url.split("/edit")[0]
-            if "gid=" in url:
-                gid = url.split("gid=")[1].split("&")[0].split("#")[0]
-                export_url = f"{base_url}/export?format=csv&gid={gid}"
-            else:
-                export_url = f"{base_url}/export?format=csv&gid=1318839330"
-        else:
-            export_url = url
+    """Fetches data from a Google Sheet using the Drive API."""
+    doc_id_match = re.search(r'/d/([^/]+)', url)
+    if not doc_id_match:
+        print("Invalid Google Sheet URL.")
+        return None
+        
+    doc_id = doc_id_match.group(1)
+    service = get_drive_service()
+    if not service:
+        return None
 
-        print(f"Fetching data from: {export_url}")
-        response = requests.get(export_url, timeout=60)
-        response.raise_for_status()
+    try:
+        request = service.files().export_media(
+            fileId=doc_id,
+            mimeType='text/csv'
+        )
         
-        csv_data = response.content.decode('utf-8')
-        df = pd.read_csv(io.StringIO(csv_data))
+        buffer = io.BytesIO()
+        downloader = MediaIoBaseDownload(buffer, request)
+        done = False
+        while done is False:
+            _, done = downloader.next_chunk()
+            
+        buffer.seek(0)
+        df = pd.read_csv(buffer)
         df = df.fillna("")
-        
-        print(f"Successfully loaded {len(df)} rows.")
         return df
     
     except Exception as e:
-        print(f"Error fetching Google Sheet: {e}")
+        print(f"Error fetching Google Sheet via API: {e}")
         return None
 
 def load_local_csv(filepath):
