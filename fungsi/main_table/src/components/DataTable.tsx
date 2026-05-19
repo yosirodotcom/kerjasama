@@ -2,8 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { JoinedDokumen, MitraInfo } from '@/lib/data';
-import { Search, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Info, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Info, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download } from 'lucide-react';
 import { isBefore, parse, isValid } from 'date-fns';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 interface DataTableProps {
   data: JoinedDokumen[];
@@ -96,6 +98,114 @@ export default function DataTable({ data }: DataTableProps) {
     setSortConfig({ key, direction });
   };
 
+  const handleExport = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Data Kerjasama');
+
+    // Filter columns based on visibility
+    const columnsToExport = COLUMNS.filter(col => visibleCols.has(col.key) && col.key !== 'id');
+
+    // Define columns for ExcelJS
+    worksheet.columns = columnsToExport.map(col => ({
+      header: col.label,
+      key: col.key,
+      width: col.key === 'tentang' || col.key === 'deskripsi' || col.key === 'judul_dokumen' ? 50 : 20
+    }));
+
+    // Style the header - only for used cells
+    const headerRow = worksheet.getRow(1);
+    columnsToExport.forEach((_, colIndex) => {
+      const cell = headerRow.getCell(colIndex + 1);
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4F46E5' } // Indigo-600
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF3730A3' } },
+        left: { style: 'thin', color: { argb: 'FF3730A3' } },
+        bottom: { style: 'thin', color: { argb: 'FF3730A3' } },
+        right: { style: 'thin', color: { argb: 'FF3730A3' } }
+      };
+    });
+
+    // Add data rows
+    filteredData.forEach((row, index) => {
+      const rowValues: any = {};
+      columnsToExport.forEach(col => {
+        if (col.key === 'no') {
+          rowValues[col.key] = index + 1;
+        } else if (col.key === 'mitra') {
+          rowValues[col.key] = row.mitras.map(m => m.nama).join(', ');
+        } else if (col.key === 'status') {
+          rowValues[col.key] = row.status;
+        } else if (['tanggal_penetapan', 'tanggal_mulai', 'tanggal_berakhir'].includes(col.key)) {
+          const dStr = (row as any)[col.key];
+          if (dStr) {
+            let parsed = parse(dStr, 'yyyy-MM-dd', new Date());
+            if (!isValid(parsed)) parsed = parse(dStr, 'M/d/yyyy', new Date());
+            if (!isValid(parsed)) parsed = parse(dStr, 'dd-MM-yyyy', new Date());
+            if (!isValid(parsed)) parsed = parse(dStr, 'd/M/yyyy', new Date());
+            if (!isValid(parsed)) parsed = parse(dStr, 'd-M-yyyy', new Date());
+            
+            rowValues[col.key] = isValid(parsed) ? parsed : dStr;
+          } else {
+            rowValues[col.key] = '';
+          }
+        } else {
+          rowValues[col.key] = (row as any)[col.key] || '';
+        }
+      });
+      const addedRow = worksheet.addRow(rowValues);
+      
+      // Zebra striping
+      if (index % 2 === 1) {
+        addedRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF8FAFC' } // Slate-50
+        };
+      }
+
+      // Border, alignment and Hyperlinks
+      addedRow.eachCell((cell, colNumber) => {
+        const colKey = columnsToExport[colNumber - 1].key;
+        
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        };
+        
+        cell.alignment = { vertical: 'middle', wrapText: true };
+
+        // Apply Hyperlink to Nomor Dokumen
+        if (colKey === 'nomor_dokumen' && row.link_dokumen) {
+          cell.value = {
+            text: row.nomor_dokumen || 'Link',
+            hyperlink: row.link_dokumen,
+            tooltip: 'Klik untuk membuka dokumen'
+          };
+          cell.font = { color: { argb: 'FF4F46E5' }, underline: true };
+        }
+
+        // Apply Date Format
+        if (['tanggal_penetapan', 'tanggal_mulai', 'tanggal_berakhir'].includes(colKey)) {
+          cell.numFmt = 'dd/mm/yyyy';
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        }
+      });
+    });
+
+    // Write and save
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `data_kerjasama_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   const enrichedData = useMemo(() => {
     return data.map((row, idx) => ({
       ...row,
@@ -117,6 +227,34 @@ export default function DataTable({ data }: DataTableProps) {
         if (key === 'mitra') {
           const matchMitra = d.mitras.some(m => m.nama.toLowerCase().includes(value.toLowerCase()));
           if (!matchMitra) return false;
+        } else if (['tanggal_penetapan', 'tanggal_mulai', 'tanggal_berakhir'].includes(key)) {
+          const cellValue = String((d as any)[key] || '');
+          const filterValue = value.trim();
+          
+          // If user types a full date dd/mm/yyyy or dd-mm-yyyy, we can do range logic
+          // But for now, let's stick to the user's specific requirement:
+          // "If Tgl Mulai is filled, and Tgl Berakhir is empty, treat it as today"
+          
+          const cellDate = parseDateForSort(cellValue);
+          const filterDate = parseDateForSort(filterValue);
+
+          // If it's a valid date filter (length 10 like 01/01/2021)
+          if (filterValue.length === 10 && filterDate > 0) {
+            if (key === 'tanggal_mulai') {
+              // Show records where start date >= filter date
+              if (cellDate < filterDate) return false;
+            } else if (key === 'tanggal_berakhir') {
+              // Show records where end date <= filter date
+              // If cellDate is 0 (empty), user said treat as today
+              const effectiveCellDate = cellDate === 0 ? new Date().getTime() : cellDate;
+              if (effectiveCellDate > filterDate) return false;
+            } else {
+              if (!cellValue.toLowerCase().includes(filterValue.toLowerCase())) return false;
+            }
+          } else {
+            // Fallback to string includes for partial typing (like "2021")
+            if (!cellValue.toLowerCase().includes(filterValue.toLowerCase())) return false;
+          }
         } else {
           const cellValue = String((d as any)[key] || '').toLowerCase();
           if (!cellValue.includes(value.toLowerCase())) return false;
@@ -181,29 +319,38 @@ export default function DataTable({ data }: DataTableProps) {
               />
             </div>
 
-            <div className="relative">
+            <div className="flex items-center gap-2">
               <button 
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-indigo-900/20"
-                onClick={() => setShowColMenu(!showColMenu)}
+                onClick={handleExport}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-emerald-900/20"
               >
-                <Eye className="w-4 h-4" /> Pilih Kolom
+                <Download className="w-4 h-4" /> Export Excel
               </button>
 
-              {showColMenu && (
-                <div className="absolute right-0 top-full mt-2 w-56 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 p-2 grid grid-cols-1 gap-1 max-h-96 overflow-y-auto">
-                  {COLUMNS.map(c => (
-                    <label key={c.key} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-700/50 rounded-lg cursor-pointer transition-colors">
-                      <input 
-                        type="checkbox" 
-                        className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-800"
-                        checked={visibleCols.has(c.key)}
-                        onChange={() => toggleCol(c.key)}
-                      />
-                      <span className="text-sm font-medium text-slate-300">{c.label}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
+              <div className="relative">
+                <button 
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-indigo-900/20"
+                  onClick={() => setShowColMenu(!showColMenu)}
+                >
+                  <Eye className="w-4 h-4" /> Pilih Kolom
+                </button>
+
+                {showColMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 p-2 grid grid-cols-1 gap-1 max-h-96 overflow-y-auto">
+                    {COLUMNS.map(c => (
+                      <label key={c.key} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-700/50 rounded-lg cursor-pointer transition-colors">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-800"
+                          checked={visibleCols.has(c.key)}
+                          onChange={() => toggleCol(c.key)}
+                        />
+                        <span className="text-sm font-medium text-slate-300">{c.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -252,7 +399,7 @@ export default function DataTable({ data }: DataTableProps) {
                       ) : (
                         <input 
                           type="text" 
-                          placeholder={`Filter...`} 
+                          placeholder={c.type === 'date' ? 'dd/mm/yyyy...' : 'Filter...'} 
                           className="w-full p-1.5 text-xs border border-slate-700 rounded text-slate-300 bg-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-normal font-sans placeholder-slate-500"
                           value={colFilters[c.key] || ''}
                           onChange={(e) => setColFilters(prev => ({...prev, [c.key]: e.target.value}))}

@@ -38,6 +38,7 @@ def generate_ts_data():
         info = {
             'nama': safe(mi.get('mitra')),
             'kategori': safe(mi.get('kategori_mitra')),
+            'negara_mitra': safe(mi.get('negara_mitra')),
             'logo': safe(mi.get('logo')),
             'penandatangan_mitra': safe(pndt.get('nama')),
             'penandatangan_mitra_telepon': safe(pndt.get('telepon')),
@@ -67,6 +68,17 @@ def generate_ts_data():
         inisiator = person_map.get(safe(p.get('inisiator')), {})
         mitras = peng_mitras.get(ref_p, [])
 
+        # Determine wilayah_kerjasama based on mitras
+        negara_list = [m.get('negara_mitra', '').upper() for m in (peng_mitras.get(ref_p, []))]
+        negara_list = [n for n in negara_list if n] # filter empty
+        
+        wilayah = ''
+        if negara_list:
+            if all(n == 'INDONESIA' for n in negara_list):
+                wilayah = 'NASIONAL'
+            else:
+                wilayah = 'INTERNASIONAL'
+
         records.append({
             'id': did,
             'jenis_dokumen': safe(p.get('jenis_dokumen')),
@@ -81,7 +93,7 @@ def generate_ts_data():
             'nama_penandatangan': safe(pndt_polnep.get('nama')),
             'jabatan_penandatangan': safe(dok.get('jabatan_penandatangan')),
             'program': safe(dok.get('program')),
-            'wilayah_kerjasama': safe(p.get('wilayah_kerjasama')),
+            'wilayah_kerjasama': wilayah,
             'judul_dokumen': safe(p.get('judul_dokumen')),
             'nama_inisiator': safe(inisiator.get('nama')),
             'inisiasi': safe(p.get('inisiasi')),
