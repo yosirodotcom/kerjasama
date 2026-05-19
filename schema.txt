@@ -201,6 +201,17 @@ Table N_ruang_lingkup {
   ruang_lingkup varchar
 }
 
+Table T_unit_pelaksana_kegiatan {
+  id varchar [primary key]
+  kategori_unit_pelaksana varchar
+  kampus varchar
+  jurusan varchar
+  rektorat varchar
+  ref_pic varchar
+  jabatan_pic varchar
+}
+Ref: T_unit_pelaksana_kegiatan.id < M_unit_pelaksana_kerjasama.ref_unit_pelaksana_kegiatan
+Ref: T_unit_pelaksana_kegiatan.ref_pic - T_person.id
 
 // ==========================================
 // RELATIONSHIPS (Ref)
