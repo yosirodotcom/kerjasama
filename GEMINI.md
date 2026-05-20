@@ -3,83 +3,82 @@
 ## Project Overview
 This project is a comprehensive system for managing, analyzing, and visualizing cooperation documents (MoU - Memorandum of Understanding and PKS - Perjanjian Kerja Sama) between **Politeknik Negeri Pontianak (POLNEP)** and various national/international partners (Mitra).
 
-The system follows a data-driven architecture where primary data is sourced from Google Sheets, processed locally using Python, and presented through both an interactive web dashboard and a portable offline report.
+The application is structured as a **Full-Stack Next.js Monorepo** where the frontend dashboard and backend API routes coexist cleanly at the root level, supported by local Python data ingestion scripts.
 
-### Key Components
-- **Data Layer (`data/`):** Contains CSV files serving as the local data store. Tables follow a specific naming convention:
-    - `T_`: Main entity tables (e.g., `T_pengajuan_kerjasama`, `T_mitra`).
-    - `M_`: Many-to-many mapping tables (e.g., `M_mitra_bekerjasama`, `M_kegiatan_kerjasama`).
-    - `N_`: Nomenclature or reference tables (e.g., `N_prodi`, `N_kabupaten_kota`).
-- **Data Ingestion (`data_handler.py`):** Python script to download and join data from Google Sheets using Pandas and Selenium.
-- **Visualization (Web - `fungsi/main_table/`):** A Next.js application (React 19, Tailwind CSS 4) providing an interactive, searchable, and filterable dashboard.
-- **Visualization (Offline - `buat_html_offline.py`):** Generates `Tabel_Offline_Share.html`, a self-contained HTML file using Vue.js and Tailwind CSS for portability without a server.
-- **Analysis Modules (`fungsi/`):** Specialized scripts for analyzing specific aspects like partner distribution, study program (prodi) involvement, and submission (pengajuan) trends.
+---
 
 ## Tech Stack
-- **Languages:** Python 3, TypeScript, JavaScript.
-- **Data Processing:** Pandas, CSV.
-- **Web Frontend:** Next.js (App Router), React, Lucide React, Framer Motion, Tailwind CSS.
-- **Offline Frontend:** Vue.js (CDN/Inlined), Tailwind CSS (Inlined).
-- **Automation:** Selenium (for Google Sheets export), Requests.
+- **Web App Framework:** Next.js 16 (App Router), React 19, TypeScript.
+- **Styling (CSS):** Tailwind CSS v4 (Dark Theme - Slate/Indigo palette by default).
+- **Libraries:** Framer Motion (animations), Lucide React (icons), Date-fns (date formatting), ExcelJS & File-Saver (export features).
+- **Data Layer:** Local CSV files as data store, compiled to a static TS store (`src/lib/data.ts`) via Python.
+- **Data Ingestion (Python):** Selenium, Requests, Pandas.
+
+---
 
 ## Building and Running
 
-### Data & Backend (Python)
+### 1. Data Processing (Python)
 Ensure Python 3 is installed with required dependencies (`pandas`, `requests`, `selenium`, `webdriver-manager`).
 
-- **Update Data:**
+- **Fetch from Google Sheets:**
   ```bash
   python data_handler.py
   ```
-- **Generate Offline Report:**
+- **Compile CSVs to Web Data Store (`src/lib/data.ts`):**
   ```bash
-  python buat_html_offline.py
+  python sync_data_to_web.py
   ```
 
-### Web Frontend (Next.js)
-Navigate to the frontend directory:
-```bash
-cd fungsi/main_table
-npm install
-npm run dev
-```
-To build for production:
-```bash
-npm run build
-```
+### 2. Next.js Web App (At Root)
+- **Install Dependencies:**
+  ```bash
+  npm install
+  ```
+- **Run Local Development Server:**
+  ```bash
+  npm run dev
+  ```
+- **Build Static Production Export:**
+  ```bash
+  npm run build
+  ```
 
-## Development Conventions
+---
 
-### Git & GitHub Procedure
-- **Remote Repository:** `https://github.com/yosirodotcom/kerjasama.git`
-- **User Identity:**
-    - Username: `yosirodotcom`
-    - Email: `yosironadi@gmail.com`
-- **Workflow:**
-    - Always verify data integrity before committing.
-    - Large binary files (like `.xlsx` or images) should be managed carefully; ensure they are intentionally included if required for reports.
-    - Use descriptive commit messages in English or Indonesian.
+## Architectural Guidelines & Conventions
 
-### Data Schema
-The database structure is documented in `schema.txt` using **DBML (Database Markup Language)**. Refer to this file for table relationships and field definitions.
+To maintain a clean, highly modular, and maintainable project, **ALL future development** must strictly follow these structural rules. Do not write monolithic pages; separate concerns cleanly:
 
-### Coding Style
-- **Python:** Use Pandas for data manipulation. Keep data processing logic centralized in `data_handler.py` or within specific `fungsi/` subdirectories.
-- **Frontend:**
-    - Prefer **Vanilla CSS** or **Tailwind CSS** for styling (Tailwind 4 is used in the main table).
-    - Use a **Dark Theme** (Slate/Indigo color palette) for consistency across web and offline versions.
-    - Components should be modular (e.g., `DataTable.tsx` handles table logic, filtering, and sorting).
+### 1. Separation of Frontend and Backend
+- **Frontend Layer (UI & Interaction):**
+  - All web views and pages go to `src/app/` (using App Router).
+  - All interactive UI widgets go to `src/components/`.
+- **Backend Layer (APIs & Business Logic):**
+  - All server-side endpoints must be placed in `src/app/api/[feature]/route.ts`.
+  - Database helper functions and static compilation logic must go to `src/lib/`.
 
-### Naming Conventions
-- CSV files and table references must strictly follow the `T_`, `M_`, `N_` prefix system.
-- Indonesian is primarily used for business logic terms (e.g., `kerjasama`, `pengajuan`, `mitra`), while code structure follows standard English conventions.
+### 2. Frontend Component Modularity (No Monoliths)
+Do not combine complex dashboards, tables, and graphs in a single page or file. Always split them into specialized folders under `src/components/`:
+- **`src/components/ui/` (Reusable Atom Components):** Basic atomic elements used across different pages (e.g., `Button.tsx`, `Modal.tsx`, `Input.tsx`, `Card.tsx`).
+- **`src/components/tables/` (Data Tables):** Complex table components handling their own sorting, pagination, and columns (e.g., `MainCooperationTable.tsx`, `PartnerTable.tsx`).
+- **`src/components/dashboard/` (Analytics & Charts):** Visual graphs, chart wrappers, and statistics summaries (e.g., `PartnerDistributionChart.tsx`, `StatsOverview.tsx`).
 
-## Project Structure
-- `data/`: Local CSV storage.
-- `fungsi/`: Sub-projects and analysis modules.
-    - `main_table/`: Primary Next.js web application.
-    - `analisis_mitra/`: Partner-specific analysis.
-    - `analisis_pengajuan/`: Submission-specific analysis.
-- `schema.txt`: DBML database schema.
-- `data_handler.py`: Core data synchronization and joining logic.
-- `buat_html_offline.py`: Static report generator.
+### 3. TypeScript Type Safety
+- All shared interfaces and typings (e.g., `JoinedDokumen`, `MitraInfo`) must be defined inside `src/types/` (or centralized in `src/types/index.ts`).
+- Both backend API routes and frontend components must import and use these shared types to ensure 100% type safety.
+
+---
+
+## Project Structure (Root-level Layout)
+- `data/`: Local CSV data storage.
+- `src/`: Next.js frontend and backend application source.
+  - `app/`: Next.js pages and API routes.
+  - `components/`: Modular React components (subdivided into `ui/`, `tables/`, `dashboard/`).
+  - `lib/`: Business logic, helpers, and static data stores.
+  - `types/`: Shared TypeScript declarations.
+- `public/`: Public assets and partner logos (`T_mitra_Images/`).
+- `data_handler.py`: Data ingestion script from Google Sheets.
+- `sync_data_to_web.py`: Script compiling CSV data directly to `src/lib/data.ts`.
+- `schema.txt`: DBML database schema documentation.
+

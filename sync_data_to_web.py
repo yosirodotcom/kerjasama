@@ -12,7 +12,7 @@ def safe(val):
 def generate_ts_data():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, 'data')
-    output_path = os.path.join(base_dir, 'fungsi', 'main_table', 'src', 'lib', 'data.ts')
+    output_path = os.path.join(base_dir, 'src', 'lib', 'data.ts')
     
     print(f"Reading data from {data_dir}...")
     
@@ -106,6 +106,7 @@ def generate_ts_data():
     ts_content = f"""export interface MitraInfo {{
   nama: string;
   kategori: string;
+  negara_mitra?: string;
   logo?: string;
   penandatangan_mitra?: string;
   penandatangan_mitra_telepon?: string;
