@@ -8,9 +8,6 @@ import re
 import urllib.parse
 import os
 import glob
-from googleapiclient.discovery import build
-from google.oauth2 import service_account
-from googleapiclient.http import MediaIoBaseDownload
 
 def get_drive_service():
     """Helper to initialize the Google Drive API service."""
@@ -28,6 +25,8 @@ def get_drive_service():
         return None
 
     try:
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
         creds = service_account.Credentials.from_service_account_file(creds_path, scopes=SCOPES)
         service = build('drive', 'v3', credentials=creds)
         return service
@@ -57,7 +56,52 @@ def download_all_sheets(download_dir="data", progress_callback=None):
     
     service = get_drive_service()
     if not service:
-        print("Failed to initialize Google Drive service. Aborting download.")
+        print("Google Drive API credentials not found or libraries missing. Falling back to public export URL download...")
+        total = len(urls)
+        success_count = 0
+        for i, original_url in enumerate(urls):
+            doc_id_match = re.search(r'/d/([^/]+)', original_url)
+            gid_match = re.search(r'[#&?]gid=(\d+)', original_url)
+            if not doc_id_match:
+                continue
+                
+            doc_id = doc_id_match.group(1)
+            gid = gid_match.group(1) if gid_match else "0"
+            export_url = f"https://docs.google.com/spreadsheets/d/{doc_id}/export?format=csv&gid={gid}"
+            
+            try:
+                res = requests.get(export_url, timeout=30)
+                res.raise_for_status()
+                
+                cd = res.headers.get('Content-Disposition', '')
+                matches = re.findall(r'filename\*?=UTF-8\'\'(.+?)$', cd)
+                if not matches:
+                    matches = re.findall(r'filename=\"?([^\"]+)\"?', cd)
+                
+                if matches:
+                    filename = urllib.parse.unquote(matches[0]).strip('"\'')
+                    if " - " in filename:
+                        filename = filename.split(" - ")[-1]
+                else:
+                    filename = f"table_{gid}.csv"
+
+                if not filename.endswith('.csv'):
+                    filename += '.csv'
+                
+                filepath = os.path.join(download_dir, filename)
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(res.text)
+                
+                success_count += 1
+                if progress_callback:
+                    progress_callback((i + 1) / total, filename)
+                else:
+                    print(f"[{i+1}/{total}] Downloaded: {filename}")
+            except Exception as e:
+                error_msg = f"Error downloading {original_url}: {e}"
+                print(error_msg)
+                if progress_callback:
+                    progress_callback((i + 1) / total, error_msg)
         return
 
     total = len(urls)
@@ -93,6 +137,7 @@ def download_all_sheets(download_dir="data", progress_callback=None):
             
             # 4. Execute Download
             with io.FileIO(filepath, 'wb') as fh:
+                from googleapiclient.http import MediaIoBaseDownload
                 downloader = MediaIoBaseDownload(fh, request)
                 done = False
                 while done is False:
@@ -383,3 +428,6 @@ def load_local_csv(filepath):
     except Exception as e:
         print(f"Error loading local CSV: {e}")
         return None
+
+if __name__ == '__main__':
+    download_all_sheets()

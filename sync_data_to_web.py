@@ -13,6 +13,7 @@ def generate_ts_data():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, 'data')
     output_path = os.path.join(base_dir, 'src', 'lib', 'data.ts')
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     print(f"Reading data from {data_dir}...")
     

@@ -215,7 +215,8 @@ export default function DataTable({ data }: DataTableProps) {
   }, [data]);
 
   const filteredData = useMemo(() => {
-    return enrichedData.filter(d => {
+    console.log('[DEBUG] colFilters:', colFilters, 'globalSearch:', globalSearch);
+    const result = enrichedData.filter(d => {
       const matchGlobal = !globalSearch || 
         Object.values(d).some(val => String(val).toLowerCase().includes(globalSearch.toLowerCase())) || 
         d.mitras.some(m => m.nama.toLowerCase().includes(globalSearch.toLowerCase()));
@@ -283,6 +284,8 @@ export default function DataTable({ data }: DataTableProps) {
       if (valA > valB) return direction === 'asc' ? 1 : -1;
       return 0;
     });
+    console.log('[DEBUG] filtered count:', result.length);
+    return result;
   }, [enrichedData, globalSearch, colFilters, sortConfig]);
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
@@ -304,7 +307,12 @@ export default function DataTable({ data }: DataTableProps) {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div>
             <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 tracking-tight">Data Mitra Kerjasama</h1>
-            <p className="text-sm text-slate-400 mt-1">Data interaktif dapat di-sortir, disaring, dan diatur visibilitas kolomnya secara dinamis.</p>
+            <p className="text-sm text-slate-400 mt-1">
+              Data interaktif dapat di-sortir, disaring, dan diatur visibilitas kolomnya secara dinamis.
+              <span className="ml-4 text-indigo-400 font-mono text-xs bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20">
+                Active Filters: {JSON.stringify(colFilters)}
+              </span>
+            </p>
           </div>
           
           <div className="flex items-center gap-3">
