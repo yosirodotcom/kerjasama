@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { JoinedDokumen, MitraInfo } from '@/lib/data';
-import { Search, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Info, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Info, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, RefreshCw } from 'lucide-react';
 import { isBefore, parse, isValid } from 'date-fns';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -40,7 +40,12 @@ const COLUMNS: Column[] = [
   { key: 'judul_dokumen', label: 'Judul Dokumen', defaultVisible: false, type: 'text' },
   { key: 'nama_inisiator', label: 'Inisiator', defaultVisible: false, type: 'text' },
   { key: 'inisiasi', label: 'Inisiasi', defaultVisible: false, type: 'category' },
-  { key: 'unit_polnep', label: 'Unit Polnep', defaultVisible: false, type: 'text' },
+  { key: 'unit_pengaju', label: 'Unit Pengaju', defaultVisible: false, type: 'text' },
+  { key: 'pic_unit_pengaju', label: 'PIC Unit Pengaju', defaultVisible: false, type: 'text' },
+  { key: 'kampus', label: 'Kampus', defaultVisible: false, type: 'text' },
+  { key: 'jurusan', label: 'Jurusan', defaultVisible: false, type: 'text' },
+  { key: 'prodi', label: 'Prodi', defaultVisible: false, type: 'text' },
+  { key: 'rektorat', label: 'Rektorat', defaultVisible: false, type: 'text' },
 ];
 
 const checkStatus = (tgl_berakhir: string) => {
@@ -82,6 +87,29 @@ export default function DataTable({ data }: DataTableProps) {
   const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc'|'desc'}>({ key: 'tanggal_penetapan', direction: 'desc' });
   const [colFilters, setColFilters] = useState<Record<string, string>>({});
   const [selectedMitra, setSelectedMitra] = useState<MitraInfo | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const handleSync = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    setSyncMessage(null);
+    try {
+      const res = await fetch('/api/sync', { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Sinkronisasi gagal');
+      }
+      setSyncMessage({ text: 'Data berhasil disinkronkan dari Google Sheets! Memuat ulang...', type: 'success' });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1200);
+    } catch (err: any) {
+      setSyncMessage({ text: err.message || 'Terjadi kesalahan saat sinkronisasi', type: 'error' });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const toggleCol = (key: string) => {
     const next = new Set(visibleCols);
@@ -328,6 +356,16 @@ export default function DataTable({ data }: DataTableProps) {
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-900/50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-indigo-900/20"
+                title="Tarik data terbaru dari Google Sheets"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Menyinkronkan...' : 'Sync Google Sheets'}
+              </button>
+
               <button 
                 onClick={handleExport}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-emerald-900/20"
@@ -362,6 +400,17 @@ export default function DataTable({ data }: DataTableProps) {
             </div>
           </div>
         </div>
+
+        {syncMessage && (
+          <div className={`mt-3 px-4 py-2.5 rounded-lg text-xs font-medium flex items-center justify-between border ${
+            syncMessage.type === 'success' 
+              ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300' 
+              : 'bg-rose-950/60 border-rose-800 text-rose-300'
+          }`}>
+            <span>{syncMessage.text}</span>
+            <button onClick={() => setSyncMessage(null)} className="ml-3 hover:opacity-80 font-bold">✕</button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 px-8 py-6 overflow-hidden flex flex-col min-h-0">

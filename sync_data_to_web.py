@@ -22,10 +22,42 @@ def generate_ts_data():
     mMitra = pd.read_csv(f"{data_dir}/M_mitra_bekerjasama.csv", dtype=str)
     tMitra = pd.read_csv(f"{data_dir}/T_mitra.csv", dtype=str)
     tPerson = pd.read_csv(f"{data_dir}/T_person.csv", dtype=str)
+    mKeg = pd.read_csv(f"{data_dir}/M_kegiatan_kerjasama.csv", dtype=str) if os.path.exists(f"{data_dir}/M_kegiatan_kerjasama.csv") else pd.DataFrame()
+    mUnit = pd.read_csv(f"{data_dir}/M_unit_pelaksana_kerjasama.csv", dtype=str) if os.path.exists(f"{data_dir}/M_unit_pelaksana_kerjasama.csv") else pd.DataFrame()
+    tUnit = pd.read_csv(f"{data_dir}/T_unit_pelaksana_kegiatan.csv", dtype=str) if os.path.exists(f"{data_dir}/T_unit_pelaksana_kegiatan.csv") else pd.DataFrame()
 
     pengajuan = {safe(r.get('id')): r.to_dict() for _,r in tPeng.iterrows() if safe(r.get('id'))}
     mitra_map = {safe(r.get('id')): r.to_dict() for _,r in tMitra.iterrows() if safe(r.get('id'))}
     person_map = {safe(r.get('id')): r.to_dict() for _,r in tPerson.iterrows() if safe(r.get('id'))}
+    unit_map = {safe(r.get('id')): r.to_dict() for _,r in tUnit.iterrows() if safe(r.get('id'))}
+
+    # Map activity ID (ref_kegiatan) -> list of unit records
+    keg_units = {}
+    if not mUnit.empty:
+        for _, mu in mUnit.iterrows():
+            kid = safe(mu.get('ref_kegiatan'))
+            uid = safe(mu.get('ref_unit_pelaksana_kegiatan'))
+            if not kid or not uid: continue
+            uinfo = unit_map.get(uid)
+            if uinfo:
+                keg_units.setdefault(kid, []).append(uinfo)
+
+    # Map document ID -> list of activity IDs (from M_kegiatan_kerjasama and T_dokumen_kerjasama.ref_kegiatan)
+    doc_kegs = {}
+    if not mKeg.empty:
+        for _, mk in mKeg.iterrows():
+            did = safe(mk.get('ref_dokumen_kerjasama'))
+            kid = safe(mk.get('ref_kegiatan'))
+            if did and kid:
+                doc_kegs.setdefault(did, []).append(kid)
+
+    for _, dok in tDok.iterrows():
+        did = safe(dok.get('id'))
+        kid = safe(dok.get('ref_kegiatan'))
+        if did and kid:
+            doc_kegs.setdefault(did, [])
+            if kid not in doc_kegs[did]:
+                doc_kegs[did].append(kid)
 
     peng_mitras = {}
     for _,m in mMitra.iterrows():
@@ -80,6 +112,26 @@ def generate_ts_data():
             else:
                 wilayah = 'INTERNASIONAL'
 
+        # Collect unit pelaksana details (kampus, jurusan, prodi, rektorat)
+        kids = doc_kegs.get(did, [])
+        kampus_list = []
+        jurusan_list = []
+        prodi_list = []
+        rektorat_list = []
+        
+        for kid in kids:
+            units = keg_units.get(kid, [])
+            for u in units:
+                k = safe(u.get('kampus'))
+                j = safe(u.get('jurusan'))
+                p_item = safe(u.get('prodi'))
+                r = safe(u.get('rektorat'))
+                
+                if k and k not in kampus_list: kampus_list.append(k)
+                if j and j not in jurusan_list: jurusan_list.append(j)
+                if p_item and p_item not in prodi_list: prodi_list.append(p_item)
+                if r and r not in rektorat_list: rektorat_list.append(r)
+
         records.append({
             'id': did,
             'jenis_dokumen': safe(p.get('jenis_dokumen')),
@@ -98,7 +150,12 @@ def generate_ts_data():
             'judul_dokumen': safe(p.get('judul_dokumen')),
             'nama_inisiator': safe(inisiator.get('nama')),
             'inisiasi': safe(p.get('inisiasi')),
-            'unit_polnep': safe(p.get('unit_polnep')),
+            'unit_pengaju': safe(p.get('unit_polnep')),
+            'pic_unit_pengaju': safe(inisiator.get('nama')),
+            'kampus': ', '.join(kampus_list),
+            'jurusan': ', '.join(jurusan_list),
+            'prodi': ', '.join(prodi_list),
+            'rektorat': ', '.join(rektorat_list),
             'mitras': mitras
         })
 
@@ -140,7 +197,12 @@ export interface JoinedDokumen {{
   judul_dokumen?: string;
   nama_inisiator?: string;
   inisiasi?: string;
-  unit_polnep?: string;
+  unit_pengaju?: string;
+  pic_unit_pengaju?: string;
+  kampus?: string;
+  jurusan?: string;
+  prodi?: string;
+  rektorat?: string;
   mitras: MitraInfo[];
 }}
 

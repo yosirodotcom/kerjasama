@@ -206,6 +206,7 @@ Table T_unit_pelaksana_kegiatan {
   kategori_unit_pelaksana varchar
   kampus varchar
   jurusan varchar
+  prodi varchar
   rektorat varchar
   ref_pic varchar
   jabatan_pic varchar
