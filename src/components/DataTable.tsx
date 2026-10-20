@@ -2,9 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { JoinedDokumen, MitraInfo } from '@/lib/data';
-import { Search, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Info, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, RefreshCw } from 'lucide-react';
-import { isBefore, parse, isValid } from 'date-fns';
+import { Search, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Info, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, RefreshCw, FolderDown, FileArchive, Loader2, AlertCircle, PackageCheck } from 'lucide-react';
+import { isBefore, parse, isValid, format } from 'date-fns';
 import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
 interface DataTableProps {
@@ -48,16 +49,53 @@ const COLUMNS: Column[] = [
   { key: 'rektorat', label: 'Rektorat', defaultVisible: false, type: 'text' },
 ];
 
+export const parseAppDate = (dStr: string | null | undefined): Date | null => {
+  if (!dStr) return null;
+  const s = String(dStr).trim();
+  if (!s) return null;
+
+  // 1. ISO standard yyyy-MM-dd
+  let parsed = parse(s, 'yyyy-MM-dd', new Date());
+  if (isValid(parsed)) return parsed;
+
+  // 2. Indonesian formats (Day first)
+  parsed = parse(s, 'dd/MM/yyyy', new Date());
+  if (isValid(parsed)) return parsed;
+
+  parsed = parse(s, 'd/M/yyyy', new Date());
+  if (isValid(parsed)) return parsed;
+
+  parsed = parse(s, 'dd-MM-yyyy', new Date());
+  if (isValid(parsed)) return parsed;
+
+  parsed = parse(s, 'd-M-yyyy', new Date());
+  if (isValid(parsed)) return parsed;
+
+  // 3. Fallback US formats (Month first)
+  parsed = parse(s, 'MM/dd/yyyy', new Date());
+  if (isValid(parsed)) return parsed;
+
+  parsed = parse(s, 'M/d/yyyy', new Date());
+  if (isValid(parsed)) return parsed;
+
+  const native = new Date(s);
+  if (isValid(native)) return native;
+
+  return null;
+};
+
+export const formatDisplayDate = (dStr: string | null | undefined): string => {
+  if (!dStr) return '-';
+  const parsed = parseAppDate(dStr);
+  if (!parsed) return dStr;
+  return format(parsed, 'dd/MM/yyyy');
+};
+
 const checkStatus = (tgl_berakhir: string) => {
   if (!tgl_berakhir) return 'Unknown';
   try {
-    let parsed = parse(tgl_berakhir, 'yyyy-MM-dd', new Date());
-    if (!isValid(parsed)) parsed = parse(tgl_berakhir, 'M/d/yyyy', new Date());
-    if (!isValid(parsed)) parsed = parse(tgl_berakhir, 'dd-MM-yyyy', new Date());
-    if (!isValid(parsed)) parsed = parse(tgl_berakhir, 'd/M/yyyy', new Date());
-    if (!isValid(parsed)) parsed = parse(tgl_berakhir, 'd-M-yyyy', new Date());
-    
-    if (!isValid(parsed)) return 'Unknown';
+    const parsed = parseAppDate(tgl_berakhir);
+    if (!parsed) return 'Unknown';
 
     const isExpired = isBefore(parsed, new Date());
     return isExpired ? 'Expired' : 'Active';
@@ -68,12 +106,8 @@ const checkStatus = (tgl_berakhir: string) => {
 
 const parseDateForSort = (dStr: string) => {
   if (!dStr) return 0;
-  let parsed = parse(dStr, 'yyyy-MM-dd', new Date());
-  if (!isValid(parsed)) parsed = parse(dStr, 'M/d/yyyy', new Date());
-  if (!isValid(parsed)) parsed = parse(dStr, 'dd-MM-yyyy', new Date());
-  if (!isValid(parsed)) parsed = parse(dStr, 'd/M/yyyy', new Date());
-  if (!isValid(parsed)) parsed = parse(dStr, 'd-M-yyyy', new Date());
-  return isValid(parsed) ? parsed.getTime() : 0;
+  const parsed = parseAppDate(dStr);
+  return parsed ? parsed.getTime() : 0;
 };
 
 export default function DataTable({ data }: DataTableProps) {
@@ -89,6 +123,165 @@ export default function DataTable({ data }: DataTableProps) {
   const [selectedMitra, setSelectedMitra] = useState<MitraInfo | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // ZIP Download State
+  interface ZipDownloadState {
+    isOpen: boolean;
+    total: number;
+    current: number;
+    currentName: string;
+    stage: 'preparing' | 'downloading' | 'zipping' | 'completed' | 'error';
+    errorMessage?: string;
+    successCount: number;
+    failedCount: number;
+  }
+
+  const [zipState, setZipState] = useState<ZipDownloadState>({
+    isOpen: false,
+    total: 0,
+    current: 0,
+    currentName: '',
+    stage: 'preparing',
+    successCount: 0,
+    failedCount: 0,
+  });
+
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  const handleCancelZip = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setZipState(prev => ({ ...prev, isOpen: false, stage: 'error', errorMessage: 'Pengunduhan dibatalkan.' }));
+  };
+
+  const handleDownloadAllZip = async () => {
+    const itemsToDownload = filteredData.filter(d => Boolean(d.link_dokumen && d.link_dokumen.trim()));
+    if (itemsToDownload.length === 0) {
+      alert('Tidak ada dokumen dengan tautan file pada hasil filter saat ini.');
+      return;
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setZipState({
+      isOpen: true,
+      total: itemsToDownload.length,
+      current: 0,
+      currentName: 'Menyiapkan berkas...',
+      stage: 'preparing',
+      successCount: 0,
+      failedCount: 0,
+    });
+
+    const zip = new JSZip();
+    const usedFileNames = new Set<string>();
+    const sanitize = (str: string) => str.replace(/[/\\?%*:|"<>]/g, '_').trim();
+
+    let successCount = 0;
+    let failedCount = 0;
+    const concurrency = 3;
+    let index = 0;
+
+    const downloadWorker = async () => {
+      while (index < itemsToDownload.length) {
+        if (controller.signal.aborted) break;
+        const currentIndex = index++;
+        const item = itemsToDownload[currentIndex];
+
+        setZipState(prev => ({
+          ...prev,
+          current: currentIndex + 1,
+          currentName: item.nomor_dokumen || item.mitras[0]?.nama || `Dokumen ${currentIndex + 1}`,
+          stage: 'downloading',
+        }));
+
+        try {
+          const res = await fetch(`/api/download-proxy?url=${encodeURIComponent(item.link_dokumen || '')}`, {
+            signal: controller.signal,
+          });
+
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+
+          let fileName = '';
+          const headerName = res.headers.get('X-File-Name');
+          if (headerName) {
+            fileName = decodeURIComponent(headerName);
+          }
+
+          if (!fileName) {
+            const rawNo = item.nomor_dokumen ? sanitize(item.nomor_dokumen) : `doc_${currentIndex + 1}`;
+            const mitraName = item.mitras[0]?.nama ? `_${sanitize(item.mitras[0].nama).slice(0, 30)}` : '';
+            fileName = `${rawNo}${mitraName}.pdf`;
+          }
+
+          let finalName = fileName;
+          let counter = 1;
+          const extIndex = fileName.lastIndexOf('.');
+          const base = extIndex > 0 ? fileName.slice(0, extIndex) : fileName;
+          const ext = extIndex > 0 ? fileName.slice(extIndex) : '.pdf';
+
+          while (usedFileNames.has(finalName.toLowerCase())) {
+            counter++;
+            finalName = `${base} (${counter})${ext}`;
+          }
+          usedFileNames.add(finalName.toLowerCase());
+
+          const arrayBuf = await res.arrayBuffer();
+          zip.file(finalName, arrayBuf);
+          successCount++;
+        } catch (err: any) {
+          if (controller.signal.aborted) return;
+          console.error(`Gagal mengunduh dokumen ${item.nomor_dokumen}:`, err);
+          failedCount++;
+          const fallbackName = `CATATAN_GAGAL_${sanitize(item.nomor_dokumen || `doc_${currentIndex + 1}`)}.txt`;
+          zip.file(fallbackName, `Dokumen tidak dapat diunduh otomatis:\nNomor Dokumen: ${item.nomor_dokumen || '-'}\nTautan: ${item.link_dokumen}\nError: ${err.message || 'Unknown'}`);
+        }
+
+        setZipState(prev => ({
+          ...prev,
+          successCount,
+          failedCount,
+        }));
+      }
+    };
+
+    try {
+      const workers = Array.from({ length: Math.min(concurrency, itemsToDownload.length) }, () => downloadWorker());
+      await Promise.all(workers);
+
+      if (controller.signal.aborted) return;
+
+      if (successCount === 0 && failedCount > 0) {
+        throw new Error('Semua dokumen gagal diunduh dari tautan Google Drive.');
+      }
+
+      setZipState(prev => ({ ...prev, stage: 'zipping', currentName: 'Mengompresi ke berkas ZIP...' }));
+
+      const zipBlob = await zip.generateAsync(
+        { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }
+      );
+
+      const timestamp = format(new Date(), 'yyyy-MM-dd_HHmm');
+      saveAs(zipBlob, `dokumen_kerjasama_filter_${timestamp}.zip`);
+
+      setZipState(prev => ({
+        ...prev,
+        stage: 'completed',
+        currentName: `Selesai! Berhasil mengemas ${successCount} dokumen.`,
+      }));
+    } catch (err: any) {
+      if (controller.signal.aborted) return;
+      setZipState(prev => ({
+        ...prev,
+        stage: 'error',
+        errorMessage: err.message || 'Terjadi kesalahan saat mengunduh dokumen.',
+      }));
+    }
+  };
 
   const handleSync = async () => {
     if (isSyncing) return;
@@ -172,13 +365,14 @@ export default function DataTable({ data }: DataTableProps) {
         } else if (['tanggal_penetapan', 'tanggal_mulai', 'tanggal_berakhir'].includes(col.key)) {
           const dStr = (row as any)[col.key];
           if (dStr) {
-            let parsed = parse(dStr, 'yyyy-MM-dd', new Date());
-            if (!isValid(parsed)) parsed = parse(dStr, 'M/d/yyyy', new Date());
-            if (!isValid(parsed)) parsed = parse(dStr, 'dd-MM-yyyy', new Date());
-            if (!isValid(parsed)) parsed = parse(dStr, 'd/M/yyyy', new Date());
-            if (!isValid(parsed)) parsed = parse(dStr, 'd-M-yyyy', new Date());
-            
-            rowValues[col.key] = isValid(parsed) ? parsed : dStr;
+            const parsed = parseAppDate(dStr);
+            if (parsed) {
+              // Compensate for local timezone offset so ExcelJS UTC serialization doesn't shift the day
+              const tzOffset = parsed.getTimezoneOffset() * 60000;
+              rowValues[col.key] = new Date(parsed.getTime() - tzOffset);
+            } else {
+              rowValues[col.key] = dStr;
+            }
           } else {
             rowValues[col.key] = '';
           }
@@ -278,11 +472,15 @@ export default function DataTable({ data }: DataTableProps) {
               const effectiveCellDate = cellDate === 0 ? new Date().getTime() : cellDate;
               if (effectiveCellDate > filterDate) return false;
             } else {
-              if (!cellValue.toLowerCase().includes(filterValue.toLowerCase())) return false;
+              const displayDate = formatDisplayDate(cellValue);
+              if (!cellValue.toLowerCase().includes(filterValue.toLowerCase()) &&
+                  !displayDate.toLowerCase().includes(filterValue.toLowerCase())) return false;
             }
           } else {
-            // Fallback to string includes for partial typing (like "2021")
-            if (!cellValue.toLowerCase().includes(filterValue.toLowerCase())) return false;
+            // Fallback to string includes for partial typing (like "2021" or "03/2026")
+            const displayDate = formatDisplayDate(cellValue);
+            if (!cellValue.toLowerCase().includes(filterValue.toLowerCase()) &&
+                !displayDate.toLowerCase().includes(filterValue.toLowerCase())) return false;
           }
         } else {
           const cellValue = String((d as any)[key] || '').toLowerCase();
@@ -371,6 +569,15 @@ export default function DataTable({ data }: DataTableProps) {
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-emerald-900/20"
               >
                 <Download className="w-4 h-4" /> Export Excel
+              </button>
+
+              <button 
+                onClick={handleDownloadAllZip}
+                disabled={zipState.isOpen && zipState.stage !== 'completed' && zipState.stage !== 'error'}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-amber-900/50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-amber-900/20"
+                title="Unduh seluruh file dokumen hasil filter saat ini dalam format ZIP"
+              >
+                <FolderDown className="w-4 h-4" /> Download Dokumen (ZIP)
               </button>
 
               <div className="relative">
@@ -473,6 +680,10 @@ export default function DataTable({ data }: DataTableProps) {
                       if (!visibleCols.has(c.key)) return null;
 
                       let content: React.ReactNode = (row as any)[c.key];
+
+                      if (['tanggal_penetapan', 'tanggal_mulai', 'tanggal_berakhir'].includes(c.key)) {
+                        content = formatDisplayDate((row as any)[c.key]);
+                      }
 
                       if (c.key === 'nomor_dokumen') {
                         content = row.link_dokumen ? (
@@ -687,6 +898,103 @@ export default function DataTable({ data }: DataTableProps) {
               >
                 Tutup
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ZIP Download Progress Modal */}
+      {zipState.isOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+          <div className="bg-slate-900 rounded-2xl shadow-2xl shadow-black/60 max-w-md w-full overflow-hidden border border-slate-800 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
+                zipState.stage === 'completed'
+                  ? 'bg-emerald-950/50 border-emerald-800/60 text-emerald-400'
+                  : zipState.stage === 'error'
+                  ? 'bg-rose-950/50 border-rose-800/60 text-rose-400'
+                  : 'bg-amber-950/50 border-amber-800/60 text-amber-400'
+              }`}>
+                {zipState.stage === 'completed' ? (
+                  <PackageCheck className="w-5 h-5" />
+                ) : zipState.stage === 'error' ? (
+                  <AlertCircle className="w-5 h-5" />
+                ) : zipState.stage === 'zipping' ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+                ) : (
+                  <FolderDown className="w-5 h-5 animate-bounce" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold text-slate-100">
+                  {zipState.stage === 'completed' ? 'Unduhan Selesai' : zipState.stage === 'error' ? 'Gagal Mengunduh' : 'Mengunduh Dokumen'}
+                </h3>
+                <p className="text-xs text-slate-400 truncate">
+                  {zipState.stage === 'zipping'
+                    ? 'Mengompresi dokumen ke ZIP...'
+                    : zipState.stage === 'completed'
+                    ? `${zipState.successCount} berkas berhasil dikemas`
+                    : zipState.stage === 'error'
+                    ? (zipState.errorMessage || 'Terjadi kesalahan')
+                    : `Memproses ${zipState.current} dari ${zipState.total} dokumen`}
+                </p>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            {zipState.stage !== 'error' && (
+              <div className="mb-4">
+                <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700/60 p-0.5">
+                  <div 
+                    className="bg-gradient-to-r from-amber-500 via-indigo-500 to-emerald-500 h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${zipState.total > 0 ? Math.min(100, Math.round((zipState.current / zipState.total) * 100)) : 0}%`
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-xs text-slate-400 mt-2 font-mono">
+                  <span>{zipState.current} / {zipState.total} Dokumen</span>
+                  <span>{zipState.total > 0 ? Math.round((zipState.current / zipState.total) * 100) : 0}%</span>
+                </div>
+              </div>
+            )}
+
+            {/* Current Item Name */}
+            {zipState.stage === 'downloading' && (
+              <div className="p-3 bg-slate-800/40 border border-slate-800 rounded-lg mb-4 text-xs">
+                <span className="text-slate-500 block mb-0.5">Sedang mengunduh:</span>
+                <span className="text-amber-300 font-medium break-all">{zipState.currentName}</span>
+              </div>
+            )}
+
+            {/* Badges info */}
+            <div className="flex items-center gap-2 mb-5 text-xs">
+              <span className="px-2.5 py-1 rounded bg-emerald-950/40 text-emerald-400 border border-emerald-800/40 font-medium">
+                Berhasil: {zipState.successCount}
+              </span>
+              {zipState.failedCount > 0 && (
+                <span className="px-2.5 py-1 rounded bg-rose-950/40 text-rose-400 border border-rose-800/40 font-medium">
+                  Gagal: {zipState.failedCount}
+                </span>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex justify-end gap-2 border-t border-slate-800 pt-4">
+              {zipState.stage === 'downloading' || zipState.stage === 'preparing' || zipState.stage === 'zipping' ? (
+                <button
+                  onClick={handleCancelZip}
+                  className="px-4 py-2 bg-slate-800 hover:bg-rose-950/50 hover:text-rose-300 hover:border-rose-800 text-slate-300 rounded-lg text-sm font-medium transition-colors border border-slate-700"
+                >
+                  Batal
+                </button>
+              ) : (
+                <button
+                  onClick={() => setZipState(prev => ({ ...prev, isOpen: false }))}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-900/20"
+                >
+                  Tutup
+                </button>
+              )}
             </div>
           </div>
         </div>

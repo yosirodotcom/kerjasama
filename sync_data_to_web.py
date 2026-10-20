@@ -1,4 +1,4 @@
-import os, json, pandas as pd
+import os, json, re, pandas as pd
 from datetime import datetime
 
 def safe(val):
@@ -8,6 +8,28 @@ def safe(val):
     except: pass
     s = str(val).strip()
     return '' if s.lower() in ('nan','none','nat','<na>') else s
+
+def normalize_date(val, row_idx=0):
+    s = safe(val)
+    if not s: return ''
+    if re.match(r'^\d{4}-\d{2}-\d{2}$', s): return s
+    parts = s.split('/')
+    if len(parts) == 3:
+        try:
+            p1, p2, y = int(parts[0]), int(parts[1]), int(parts[2])
+            if p1 > 12: d, m = p1, p2
+            elif p2 > 12: m, d = p1, p2
+            elif row_idx >= 703: d, m = p1, p2
+            else: m, d = p1, p2
+            return f"{y:04d}-{m:02d}-{d:02d}"
+        except: return s
+    parts_dash = s.split('-')
+    if len(parts_dash) == 3 and len(parts_dash[0]) <= 2 and len(parts_dash[2]) == 4:
+        try:
+            d, m, y = int(parts_dash[0]), int(parts_dash[1]), int(parts_dash[2])
+            return f"{y:04d}-{m:02d}-{d:02d}"
+        except: return s
+    return s
 
 def generate_ts_data():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -138,9 +160,9 @@ def generate_ts_data():
             'nomor_dokumen': safe(dok.get('nomor_dokumen')),
             'link_dokumen': safe(dok.get('link_dokumen')),
             'tentang': safe(p.get('tentang')),
-            'tanggal_penetapan': safe(dok.get('tanggal_penetapan')),
-            'tanggal_mulai': safe(dok.get('tanggal_mulai')),
-            'tanggal_berakhir': safe(dok.get('tanggal_berakhir')),
+            'tanggal_penetapan': normalize_date(dok.get('tanggal_penetapan'), dok.name),
+            'tanggal_mulai': normalize_date(dok.get('tanggal_mulai'), dok.name),
+            'tanggal_berakhir': normalize_date(dok.get('tanggal_berakhir'), dok.name),
             'deskripsi': safe(dok.get('deskripsi')),
             'ref_mou': safe(dok.get('ref_mou')),
             'nama_penandatangan': safe(pndt_polnep.get('nama')),
