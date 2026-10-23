@@ -217,4 +217,4 @@ __marimo__/
 .vercel
 *.tsbuildinfo
 next-env.d.ts
-/data/
+
