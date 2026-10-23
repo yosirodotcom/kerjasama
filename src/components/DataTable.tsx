@@ -14,7 +14,13 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import HeaderBanner from './dashboard/HeaderBanner';
 import StatsOverview from './dashboard/StatsOverview';
+import StatsFilterBar from './dashboard/StatsFilterBar';
 import { SDGS_THEME, getStatusStyle } from '@/lib/theme';
+import type { StatsFilter } from '@/types';
+import {
+  getDefaultStatsFilter, applyStatsFilter, applyPreviousStatsFilter, getJurusanOptions, getProdiGroups,
+  applyPeriodAndWilayah, countByMultiField, getPeriodLabel, getComparisonLabel, getTrendSeries,
+} from '@/lib/statsFilter';
 
 interface DataTableProps {
   data: JoinedDokumen[];
@@ -135,6 +141,8 @@ export default function DataTable({ data }: DataTableProps) {
   // Dashboard & Filter states
   const [showStats, setShowStats] = useState(true);
   const [activePillFilter, setActivePillFilter] = useState('Semua');
+  // Stats-card-only filter (independent from table filters)
+  const [statsFilter, setStatsFilter] = useState<StatsFilter>(getDefaultStatsFilter);
 
   // ZIP Download State
   interface ZipDownloadState {
@@ -278,7 +286,7 @@ export default function DataTable({ data }: DataTableProps) {
       );
 
       const timestamp = format(new Date(), 'yyyy-MM-dd_HHmm');
-      saveAs(zipBlob, `dokumen_kerjasama_sdgs_${timestamp}.zip`);
+      saveAs(zipBlob, `dokumen_kerja_sama_${timestamp}.zip`);
 
       setZipState(prev => ({
         ...prev,
@@ -359,7 +367,7 @@ export default function DataTable({ data }: DataTableProps) {
 
   const handleExport = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Data Kerjasama SDGs');
+    const worksheet = workbook.addWorksheet('Data Kerja Sama POLNEP');
 
     // Filter columns based on visibility
     const columnsToExport = COLUMNS.filter(col => visibleCols.has(col.key) && col.key !== 'id');
@@ -462,7 +470,7 @@ export default function DataTable({ data }: DataTableProps) {
     // Write and save
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `data_kerjasama_sdgs_${new Date().toISOString().split('T')[0]}.xlsx`);
+    saveAs(blob, `data_kerja_sama_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const enrichedData = useMemo(() => {
@@ -473,8 +481,21 @@ export default function DataTable({ data }: DataTableProps) {
     }));
   }, [data]);
 
+  // Statistics filter derived data (does not affect the table below)
+  const jurusanOptions = useMemo(() => getJurusanOptions(data), [data]);
+  const prodiGroups = useMemo(() => getProdiGroups(data, statsFilter.jurusan), [data, statsFilter.jurusan]);
+  const statsOptionBase = useMemo(() => applyPeriodAndWilayah(enrichedData, statsFilter), [enrichedData, statsFilter]);
+  const jurusanCounts = useMemo(() => countByMultiField(statsOptionBase, 'jurusan'), [statsOptionBase]);
+  const prodiCounts = useMemo(() => countByMultiField(statsOptionBase, 'prodi'), [statsOptionBase]);
+  const statsData = useMemo(() => applyStatsFilter(enrichedData, statsFilter), [enrichedData, statsFilter]);
+  const statsPreviousCount = useMemo(
+    () => applyPreviousStatsFilter(enrichedData, statsFilter).length,
+    [enrichedData, statsFilter]
+  );
+  const statsTrend = useMemo(() => getTrendSeries(statsData, statsFilter), [statsData, statsFilter]);
+
   const filteredData = useMemo(() => {
-    const result = enrichedData.filter(d => {
+    const result = statsData.filter(d => {
       const matchGlobal = !globalSearch || 
         Object.values(d).some(val => String(val).toLowerCase().includes(globalSearch.toLowerCase())) || 
         d.mitras.some(m => m.nama.toLowerCase().includes(globalSearch.toLowerCase()));
@@ -538,7 +559,7 @@ export default function DataTable({ data }: DataTableProps) {
     });
 
     return result;
-  }, [enrichedData, globalSearch, colFilters, sortConfig]);
+  }, [statsData, globalSearch, colFilters, sortConfig]);
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
   const paginatedData = useMemo(() => {
@@ -578,8 +599,25 @@ export default function DataTable({ data }: DataTableProps) {
 
         {/* SECTION: SDGs Analytics & Progress Charts (matching screenshot) */}
         {showStats && (
+          <>
+          <StatsFilterBar
+            filter={statsFilter}
+            onChange={(nextFilter) => {
+              setStatsFilter(nextFilter);
+              setCurrentPage(1);
+            }}
+            jurusanOptions={jurusanOptions}
+            prodiGroups={prodiGroups}
+            jurusanCounts={jurusanCounts}
+            prodiCounts={prodiCounts}
+            resultCount={statsData.length}
+          />
           <StatsOverview
-            data={enrichedData}
+            data={statsData}
+            periodLabel={getPeriodLabel(statsFilter)}
+            comparisonLabel={getComparisonLabel(statsFilter)}
+            previousCount={statsPreviousCount}
+            trend={statsTrend}
             onFilterStatus={(status) => {
               setColFilters(prev => ({ ...prev, status }));
               setCurrentPage(1);
@@ -589,6 +627,7 @@ export default function DataTable({ data }: DataTableProps) {
               setCurrentPage(1);
             }}
           />
+          </>
         )}
 
         {/* SECTION: Toolbar Controls Card */}
@@ -598,14 +637,14 @@ export default function DataTable({ data }: DataTableProps) {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-slate-800 tracking-tight">
-                  Tabel Data Kerjasama
+                  Tabel Data Dokumen Kerja Sama
                 </h2>
                 <span className="text-xs bg-sky-100 text-sky-800 font-bold px-2 py-0.5 rounded-full">
                   {filteredData.length} Dokumen
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Data interaktif dapat di-sortir, disaring, dan diatur visibilitas kolomnya secara dinamis.
+                Data interaktif dokumen kerja sama dapat disortir, disaring, dan diatur visibilitas kolomnya secara dinamis.
               </p>
             </div>
 
@@ -630,7 +669,7 @@ export default function DataTable({ data }: DataTableProps) {
                 title={showStats ? 'Sembunyikan grafik statistik' : 'Tampilkan grafik statistik'}
               >
                 <BarChart3 className="w-4 h-4 text-sky-600" />
-                <span>{showStats ? 'Sembunyikan Statistik' : 'Lihat Statistik'}</span>
+                <span>{showStats ? 'Sembunyikan Statistik' : 'Lihat Statistik Kerja Sama'}</span>
               </button>
 
               {/* Sync Google Sheets Button */}
@@ -1079,7 +1118,7 @@ export default function DataTable({ data }: DataTableProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-bold text-slate-900">
-                  {zipState.stage === 'completed' ? 'Unduhan Selesai' : zipState.stage === 'error' ? 'Gagal Mengunduh' : 'Mengunduh Dokumen ZIP'}
+                  {zipState.stage === 'completed' ? 'Unduhan Selesai' : zipState.stage === 'error' ? 'Gagal Mengunduh' : 'Mengunduh Dokumen Kerja Sama (ZIP)'}
                 </h3>
                 <p className="text-xs text-slate-500 truncate">
                   {zipState.stage === 'zipping'

@@ -13,8 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SDGs POLNEP • Satu Data Kerjasama Dekade Aksi 2030",
-  description: "Dashboard Interaktif Data Dokumen Kerjasama (MoU & PKS) Politeknik Negeri Pontianak dalam mendukung capaian SDGs 2030",
+  title: "Satu Data Kerja Sama • Politeknik Negeri Pontianak (POLNEP)",
+  description: "Dashboard Interaktif Data Dokumen Kerja Sama (MoU & PKS) Politeknik Negeri Pontianak",
+  icons: {
+    icon: "/assets/logo-polnep.png",
+  },
 };
 
 export default function RootLayout({

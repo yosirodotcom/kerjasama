@@ -10,9 +10,34 @@ interface StatsOverviewProps {
   data: JoinedDokumen[];
   onFilterStatus?: (status: string) => void;
   onFilterJenis?: (jenis: string) => void;
+  /** Label of the active filter period, e.g. "Tahun 2026". */
+  periodLabel?: string;
+  /** Label of the comparison period, e.g. "vs 2025". */
+  comparisonLabel?: string;
+  /** Document count in the comparison period (same attribute filters). */
+  previousCount?: number;
+  /** Document counts per time bucket within the active period. */
+  trend?: number[];
 }
 
-export default function StatsOverview({ data, onFilterStatus, onFilterJenis }: StatsOverviewProps) {
+function buildTrendPaths(series: number[]) {
+  if (series.length < 2) return null;
+  const max = Math.max(1, ...series);
+  const step = 200 / (series.length - 1);
+  const pts = series.map((v, i) => ({ x: +(i * step).toFixed(2), y: +(54 - (v / max) * 46).toFixed(2) }));
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  return { line, area: `${line} L 200 60 L 0 60 Z`, pts, max };
+}
+
+export default function StatsOverview({
+  data,
+  onFilterStatus,
+  onFilterJenis,
+  periodLabel = 'Semua Periode',
+  comparisonLabel = '',
+  previousCount,
+  trend = [],
+}: StatsOverviewProps) {
   // Aggregate real-time statistics
   const total = data.length || 1;
 
@@ -54,7 +79,7 @@ export default function StatsOverview({ data, onFilterStatus, onFilterJenis }: S
     data.forEach((d) => {
       const j = (d.jenis_dokumen || '').toUpperCase();
       if (j.includes('MOU')) mou++;
-      else if (j.includes('PKS') || j.includes('PERJANJIAN KERJASAMA')) pks++;
+      else if (j.includes('PKS') || j.includes('PERJANJIAN KERJASAMA') || j.includes('PERJANJIAN KERJA SAMA')) pks++;
       else lainnya++;
     });
 
@@ -78,9 +103,18 @@ export default function StatsOverview({ data, onFilterStatus, onFilterJenis }: S
     return names.size;
   }, [data]);
 
+  const growth = React.useMemo(() => {
+    if (previousCount === undefined) return null;
+    if (previousCount === 0) return data.length > 0 ? { text: 'Baru', positive: true } : null;
+    const pct = ((data.length - previousCount) / previousCount) * 100;
+    return { text: `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`, positive: pct >= 0 };
+  }, [data.length, previousCount]);
+
+  const trendPaths = React.useMemo(() => buildTrendPaths(trend), [trend]);
+
   return (
     <div className="w-full space-y-5">
-      {/* SECTION 1: Capaian Global & Perkembangan (Cards Grid matching top screenshot) */}
+      {/* SECTION 1: Capaian & Perkembangan Kerja Sama */}
       <div className="bg-white rounded-2xl border border-sky-100 shadow-xs p-5 md:p-6 transition-all">
         {/* Section Header */}
         <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
@@ -89,15 +123,22 @@ export default function StatsOverview({ data, onFilterStatus, onFilterJenis }: S
               <TrendingUp className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-800">Capaian Kerjasama SDGs POLNEP</h2>
-              <p className="text-xs text-slate-500">Statistik dan tren dokumen kerjasama terkini</p>
+              <h2 className="text-base font-bold text-slate-800">Capaian Kerja Sama POLNEP</h2>
+              <p className="text-xs text-slate-500">Statistik dokumen kerja sama • {periodLabel}</p>
             </div>
           </div>
           <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200">
             <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-ping"></span>
-            Live Data Store
+            Data Terverifikasi
           </span>
         </div>
+
+        {data.length === 0 && (
+          <div className="mb-5 flex items-center gap-2 rounded-xl border border-dashed border-orange-200 bg-orange-50/60 px-4 py-3 text-xs font-medium text-orange-800">
+            <FileText className="h-4 w-4 shrink-0 text-orange-500" />
+            Tidak ada dokumen kerja sama yang cocok dengan filter pada periode {periodLabel}.
+          </div>
+        )}
 
         {/* 3 Main Stat Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -105,51 +146,57 @@ export default function StatsOverview({ data, onFilterStatus, onFilterJenis }: S
           <div className="bg-gradient-to-b from-sky-50/50 to-white p-4 sm:p-5 rounded-xl border border-sky-100 flex flex-col justify-between relative overflow-hidden group">
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">Total Dokumen</span>
+                <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">Total Dokumen Kerja Sama</span>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-3xl font-extrabold text-slate-900">{data.length}</span>
                   <span className="text-xs text-slate-500 font-medium">berkas</span>
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                +10.8% YoY
-              </span>
+              {growth && (
+                <span
+                  title={`${previousCount} dokumen ${comparisonLabel}`}
+                  className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                    growth.positive
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                      : 'text-rose-700 bg-rose-50 border-rose-200'
+                  }`}
+                >
+                  {growth.text} <span className="font-medium opacity-75">{comparisonLabel}</span>
+                </span>
+              )}
             </div>
 
-            {/* Smooth SVG Area Line Chart */}
+            {/* Trend Line Chart (documents per bucket in the active period) */}
             <div className="w-full h-20 my-3 relative">
-              <svg viewBox="0 0 200 60" className="w-full h-full overflow-visible">
-                <defs>
-                  <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#0284C7" stop-opacity="0.25" />
-                    <stop offset="100%" stop-color="#0284C7" stop-opacity="0.0" />
-                  </linearGradient>
-                </defs>
-                {/* Area Fill */}
-                <path
-                  d="M 0 50 Q 30 42 60 40 T 110 32 T 150 20 T 200 8 L 200 60 L 0 60 Z"
-                  fill="url(#areaGradient)"
-                />
-                {/* Line Path */}
-                <path
-                  d="M 0 50 Q 30 42 60 40 T 110 32 T 150 20 T 200 8"
-                  fill="none"
-                  stroke="#0284C7"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
-                {/* Data Points */}
-                <circle cx="60" cy="40" r="3" fill="#FFFFFF" stroke="#0284C7" strokeWidth="2" />
-                <circle cx="110" cy="32" r="3" fill="#FFFFFF" stroke="#0284C7" strokeWidth="2" />
-                <circle cx="150" cy="20" r="3.5" fill="#FFFFFF" stroke="#0284C7" strokeWidth="2" />
-                <circle cx="200" cy="8" r="4" fill="#0284C7" stroke="#FFFFFF" strokeWidth="2" />
-              </svg>
+              {trendPaths ? (
+                <svg viewBox="0 0 200 60" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                  <defs>
+                    <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#0284C7" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#0284C7" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <path d={trendPaths.area} fill="url(#areaGradient)" className="transition-all duration-500" />
+                  <path
+                    d={trendPaths.line}
+                    fill="none"
+                    stroke="#0284C7"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    vectorEffect="non-scaling-stroke"
+                    className="transition-all duration-500"
+                  />
+                </svg>
+              ) : (
+                <div className="h-full flex items-center justify-center text-[11px] text-slate-400">Tren tidak tersedia</div>
+              )}
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-              <span>Periode 2012 - 2026</span>
+              <span>{periodLabel}</span>
               <span className="text-sky-600 font-semibold flex items-center gap-0.5">
-                Aktif Terverifikasi <ChevronRight className="w-3 h-3" />
+                Berdasarkan Tgl Mulai <ChevronRight className="w-3 h-3" />
               </span>
             </div>
           </div>
@@ -201,11 +248,11 @@ export default function StatsOverview({ data, onFilterStatus, onFilterJenis }: S
             </div>
           </div>
 
-          {/* Card 3: Mitra & Peringkat Kolaborasi */}
+          {/* Card 3: Mitra Kerja Sama & Kolaborasi */}
           <div className="bg-gradient-to-b from-sky-50/50 to-white p-4 sm:p-5 rounded-xl border border-sky-100 flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">Mitra Kerjasama</span>
+                <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">Mitra Kerja Sama</span>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-3xl font-extrabold text-slate-900">{uniqueMitraCount}</span>
                   <span className="text-xs text-slate-500 font-medium">instansi unik</span>
@@ -221,10 +268,10 @@ export default function StatsOverview({ data, onFilterStatus, onFilterJenis }: S
               <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
               <div className="text-left">
                 <span className="text-xs font-bold text-emerald-900 block leading-tight">
-                  Kemitraan Berkelanjutan
+                  Kemitraan Strategis Berkelanjutan
                 </span>
                 <span className="text-[11px] text-emerald-700">
-                  Mendukung SDGs Goal 17 (Partnership)
+                  Kolaborasi Industri, Pemerintah & Edukasi
                 </span>
               </div>
             </div>
@@ -237,10 +284,10 @@ export default function StatsOverview({ data, onFilterStatus, onFilterJenis }: S
         </div>
       </div>
 
-      {/* SECTION 2: Status Breakdown & Pilar Stacked Bars */}
+      {/* SECTION 2: Status Breakdown & Jenis Dokumen Stacked Bars */}
       <div className="bg-white rounded-2xl border border-sky-100 shadow-xs p-5 md:p-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-          {/* Left: Donut Chart Status (4 cols) */}
+          {/* Left: Donut Chart Status (5 cols) */}
           <div className="lg:col-span-5 flex flex-col sm:flex-row items-center gap-5 p-4 bg-slate-50/60 rounded-xl border border-slate-100">
             {/* Donut representation */}
             <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
@@ -335,9 +382,9 @@ export default function StatsOverview({ data, onFilterStatus, onFilterJenis }: S
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                 <Layers className="w-4 h-4 text-sky-600" />
-                Proporsi Berdasarkan Jenis Dokumen
+                Proporsi Berdasarkan Jenis Dokumen Kerja Sama
               </h3>
-              <span className="text-xs text-slate-400">MoU • PKS • Perjanjian Kerjasama</span>
+              <span className="text-xs text-slate-400">MoU • PKS • Perjanjian Kerja Sama</span>
             </div>
 
             {/* Segmented Progress Bar */}
@@ -394,7 +441,7 @@ export default function StatsOverview({ data, onFilterStatus, onFilterJenis }: S
               <div className="flex items-center justify-between p-3 rounded-xl bg-sky-600 text-white shadow-xs">
                 <div className="flex items-center gap-2.5">
                   <FileText className="w-5 h-5 text-sky-200" />
-                  <span className="text-xs font-bold">Dokumen Nasional</span>
+                  <span className="text-xs font-bold">Dokumen Kerja Sama Nasional</span>
                 </div>
                 <span className="text-xs font-mono font-semibold bg-white/20 px-2 py-0.5 rounded-md">
                   POLNEP Kalbar
@@ -404,10 +451,10 @@ export default function StatsOverview({ data, onFilterStatus, onFilterJenis }: S
               <div className="flex items-center justify-between p-3 rounded-xl bg-teal-600 text-white shadow-xs">
                 <div className="flex items-center gap-2.5">
                   <MapPin className="w-5 h-5 text-teal-200" />
-                  <span className="text-xs font-bold">Jaringan Kerjasama</span>
+                  <span className="text-xs font-bold">Jaringan Kerja Sama</span>
                 </div>
                 <span className="text-xs font-mono font-semibold bg-white/20 px-2 py-0.5 rounded-md">
-                  SDGs Indonesia
+                  Mitra POLNEP
                 </span>
               </div>
             </div>
