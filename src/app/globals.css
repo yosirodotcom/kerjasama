@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f9fd;
+  --foreground: #0f172a;
+
+  /* SDGs Indonesia Theme Colors */
+  --sdgs-primary: #0284c7;
+  --sdgs-primary-dark: #0369a1;
+  --sdgs-primary-light: #e0f2fe;
+  --sdgs-primary-subtle: #f0f7fd;
+  --sdgs-orange: #ea580c;
+  --sdgs-orange-light: #fff7ed;
+  --sdgs-emerald: #059669;
+  --sdgs-emerald-light: #ecfdf5;
+  --sdgs-rose: #e11d48;
+  --sdgs-rose-light: #fff1f2;
+  --sdgs-amber: #d97706;
+  --sdgs-amber-light: #fffbeb;
+  --sdgs-teal: #0d9488;
+  --sdgs-navy: #0f172a;
 }
 
 @theme inline {
@@ -10,17 +26,41 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-sdgs-primary: var(--sdgs-primary);
+  --color-sdgs-primary-dark: var(--sdgs-primary-dark);
+  --color-sdgs-primary-light: var(--sdgs-primary-light);
+  --color-sdgs-orange: var(--sdgs-orange);
+  --color-sdgs-emerald: var(--sdgs-emerald);
+  --color-sdgs-rose: var(--sdgs-rose);
+  --color-sdgs-amber: var(--sdgs-amber);
+  --color-sdgs-teal: var(--sdgs-teal);
+  --color-sdgs-navy: var(--sdgs-navy);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar matching SDGs clean dashboard */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

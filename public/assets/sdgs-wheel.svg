@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- SDGs 17-Color Ring -->
+  <defs>
+    <style>
+      .slice { stroke-width: 14; fill: none; }
+    </style>
+  </defs>
+  <circle cx="50" cy="50" r="38" stroke="#E5243B" stroke-dasharray="14 225" stroke-dashoffset="0" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#DDA63A" stroke-dasharray="14 225" stroke-dashoffset="-14" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#4C9F38" stroke-dasharray="14 225" stroke-dashoffset="-28" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#C5192D" stroke-dasharray="14 225" stroke-dashoffset="-42" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#FF3A21" stroke-dasharray="14 225" stroke-dashoffset="-56" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#26BDE2" stroke-dasharray="14 225" stroke-dashoffset="-70" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#FCC30B" stroke-dasharray="14 225" stroke-dashoffset="-84" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#A21942" stroke-dasharray="14 225" stroke-dashoffset="-98" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#FD6925" stroke-dasharray="14 225" stroke-dashoffset="-112" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#DD1367" stroke-dasharray="14 225" stroke-dashoffset="-126" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#FD9D24" stroke-dasharray="14 225" stroke-dashoffset="-140" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#BF8B2E" stroke-dasharray="14 225" stroke-dashoffset="-154" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#3F7E44" stroke-dasharray="14 225" stroke-dashoffset="-168" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#0A97D9" stroke-dasharray="14 225" stroke-dashoffset="-182" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#56C02B" stroke-dasharray="14 225" stroke-dashoffset="-196" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#00689D" stroke-dasharray="14 225" stroke-dashoffset="-210" class="slice"/>
+  <circle cx="50" cy="50" r="38" stroke="#19486A" stroke-dasharray="14 225" stroke-dashoffset="-224" class="slice"/>
+  <circle cx="50" cy="50" r="28" fill="#FFFFFF" />
+  <text x="50" y="47" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="12" fill="#0369A1">SDGs</text>
+  <text x="50" y="59" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="700" font-size="7" fill="#EA580C">POLNEP</text>
+</svg>
