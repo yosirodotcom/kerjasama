@@ -89,8 +89,8 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers,
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error('[download-proxy] Error:', err);
-    return NextResponse.json({ error: err.message || 'Gagal mengunduh file' }, { status: 500 });
+    return NextResponse.json({ error: (err instanceof Error && err.message) || 'Gagal mengunduh file' }, { status: 500 });
   }
 }

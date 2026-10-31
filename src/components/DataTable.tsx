@@ -3,10 +3,10 @@
 import React, { useState, useMemo } from 'react';
 import { JoinedDokumen, MitraInfo } from '@/lib/data';
 import { 
-  Search, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Info, 
+  Search, Eye, XCircle, Info, 
   ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, 
-  RefreshCw, FolderDown, FileArchive, Loader2, AlertCircle, PackageCheck,
-  BarChart3, FilterX, ExternalLink, Sparkles
+  RefreshCw, FolderDown, Loader2, AlertCircle, PackageCheck,
+  BarChart3, FilterX, ExternalLink
 } from 'lucide-react';
 import { isBefore, parse, isValid, format } from 'date-fns';
 import ExcelJS from 'exceljs';
@@ -15,7 +15,7 @@ import { saveAs } from 'file-saver';
 import HeaderBanner from './dashboard/HeaderBanner';
 import StatsOverview from './dashboard/StatsOverview';
 import StatsFilterBar from './dashboard/StatsFilterBar';
-import { SDGS_THEME, getStatusStyle } from '@/lib/theme';
+import { getStatusStyle } from '@/lib/theme';
 import type { StatsFilter } from '@/types';
 import {
   getDefaultStatsFilter, applyStatsFilter, applyPreviousStatsFilter, getJurusanOptions, getProdiGroups,
@@ -123,6 +123,10 @@ const parseDateForSort = (dStr: string) => {
   const parsed = parseAppDate(dStr);
   return parsed ? parsed.getTime() : 0;
 };
+
+/** Reads a row field by dynamic column key as a string (empty when missing). */
+const getCellValue = (row: object, key: string): string =>
+  String((row as Record<string, unknown>)[key] || '');
 
 export default function DataTable({ data }: DataTableProps) {
   const [globalSearch, setGlobalSearch] = useState('');
@@ -253,12 +257,12 @@ export default function DataTable({ data }: DataTableProps) {
           const arrayBuf = await res.arrayBuffer();
           zip.file(finalName, arrayBuf);
           successCount++;
-        } catch (err: any) {
+        } catch (err) {
           if (controller.signal.aborted) return;
           console.error(`Gagal mengunduh dokumen ${item.nomor_dokumen}:`, err);
           failedCount++;
           const fallbackName = `CATATAN_GAGAL_${sanitize(item.nomor_dokumen || `doc_${currentIndex + 1}`)}.txt`;
-          zip.file(fallbackName, `Dokumen tidak dapat diunduh otomatis:\nNomor Dokumen: ${item.nomor_dokumen || '-'}\nTautan: ${item.link_dokumen}\nError: ${err.message || 'Unknown'}`);
+          zip.file(fallbackName, `Dokumen tidak dapat diunduh otomatis:\nNomor Dokumen: ${item.nomor_dokumen || '-'}\nTautan: ${item.link_dokumen}\nError: ${(err instanceof Error && err.message) || 'Unknown'}`);
         }
 
         setZipState(prev => ({
@@ -293,12 +297,12 @@ export default function DataTable({ data }: DataTableProps) {
         stage: 'completed',
         currentName: `Selesai! Berhasil mengemas ${successCount} dokumen.`,
       }));
-    } catch (err: any) {
+    } catch (err) {
       if (controller.signal.aborted) return;
       setZipState(prev => ({
         ...prev,
         stage: 'error',
-        errorMessage: err.message || 'Terjadi kesalahan saat mengunduh dokumen.',
+        errorMessage: (err instanceof Error && err.message) || 'Terjadi kesalahan saat mengunduh dokumen.',
       }));
     }
   };
@@ -317,8 +321,8 @@ export default function DataTable({ data }: DataTableProps) {
       setTimeout(() => {
         window.location.reload();
       }, 1200);
-    } catch (err: any) {
-      setSyncMessage({ text: err.message || 'Terjadi kesalahan saat sinkronisasi', type: 'error' });
+    } catch (err) {
+      setSyncMessage({ text: (err instanceof Error && err.message) || 'Terjadi kesalahan saat sinkronisasi', type: 'error' });
     } finally {
       setIsSyncing(false);
     }
@@ -400,7 +404,7 @@ export default function DataTable({ data }: DataTableProps) {
 
     // Add data rows
     filteredData.forEach((row, index) => {
-      const rowValues: any = {};
+      const rowValues: Record<string, string | number | Date> = {};
       columnsToExport.forEach(col => {
         if (col.key === 'no') {
           rowValues[col.key] = index + 1;
@@ -409,7 +413,7 @@ export default function DataTable({ data }: DataTableProps) {
         } else if (col.key === 'status') {
           rowValues[col.key] = row.status;
         } else if (['tanggal_penetapan', 'tanggal_mulai', 'tanggal_berakhir'].includes(col.key)) {
-          const dStr = (row as any)[col.key];
+          const dStr = getCellValue(row, col.key);
           if (dStr) {
             const parsed = parseAppDate(dStr);
             if (parsed) {
@@ -422,7 +426,7 @@ export default function DataTable({ data }: DataTableProps) {
             rowValues[col.key] = '';
           }
         } else {
-          rowValues[col.key] = (row as any)[col.key] || '';
+          rowValues[col.key] = getCellValue(row, col.key);
         }
       });
       const addedRow = worksheet.addRow(rowValues);
@@ -508,7 +512,7 @@ export default function DataTable({ data }: DataTableProps) {
           const matchMitra = d.mitras.some(m => m.nama.toLowerCase().includes(value.toLowerCase()));
           if (!matchMitra) return false;
         } else if (['tanggal_penetapan', 'tanggal_mulai', 'tanggal_berakhir'].includes(key)) {
-          const cellValue = String((d as any)[key] || '');
+          const cellValue = getCellValue(d, key);
           const filterValue = value.trim();
           const cellDate = parseDateForSort(cellValue);
           const filterDate = parseDateForSort(filterValue);
@@ -530,15 +534,15 @@ export default function DataTable({ data }: DataTableProps) {
                 !displayDate.toLowerCase().includes(filterValue.toLowerCase())) return false;
           }
         } else {
-          const cellValue = String((d as any)[key] || '').toLowerCase();
+          const cellValue = getCellValue(d, key).toLowerCase();
           if (!cellValue.includes(value.toLowerCase())) return false;
         }
       }
       return true;
     }).sort((a, b) => {
       const { key, direction } = sortConfig;
-      let valA: any = (a as any)[key];
-      let valB: any = (b as any)[key];
+      let valA: string | number = getCellValue(a, key);
+      let valB: string | number = getCellValue(b, key);
 
       if (key === 'mitra') {
         valA = a.mitras.map(m => m.nama).join(', ');
@@ -803,7 +807,7 @@ export default function DataTable({ data }: DataTableProps) {
                           onChange={(e) => setColFilters(prev => ({...prev, [c.key]: e.target.value}))}
                         >
                           <option value="">Semua</option>
-                          {Array.from(new Set(enrichedData.map(d => String((d as any)[c.key] || '')))).filter(Boolean).map(val => (
+                          {Array.from(new Set(enrichedData.map(d => getCellValue(d, c.key)))).filter(Boolean).map(val => (
                             <option key={val} value={val}>{val}</option>
                           ))}
                         </select>
@@ -828,10 +832,10 @@ export default function DataTable({ data }: DataTableProps) {
                     {COLUMNS.map(c => {
                       if (!visibleCols.has(c.key)) return null;
 
-                      let content: React.ReactNode = (row as any)[c.key];
+                      let content: React.ReactNode = getCellValue(row, c.key);
 
                       if (['tanggal_penetapan', 'tanggal_mulai', 'tanggal_berakhir'].includes(c.key)) {
-                        content = formatDisplayDate((row as any)[c.key]);
+                        content = formatDisplayDate(getCellValue(row, c.key));
                       }
 
                       if (c.key === 'nomor_dokumen') {

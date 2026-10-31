@@ -41,12 +41,12 @@ export async function POST() {
         compile: compileOutput.trim(),
       },
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error('[API /api/sync] Failed:', err);
     return NextResponse.json(
       {
         success: false,
-        error: err.message || 'Gagal menyinkronkan data dari Google Sheets.',
+        error: (err instanceof Error && err.message) || 'Gagal menyinkronkan data dari Google Sheets.',
       },
       { status: 500 }
     );
