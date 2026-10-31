@@ -79,6 +79,7 @@ Table T_person {
   jabatan varchar
   alamat varchar
   kantor varchar
+  title varchar
 }
 
 Table T_kegiatan {
@@ -101,6 +102,7 @@ Table T_kegiatan {
   deskripsi_kegiatan varchar
   kategori_nilai_kontrak varchar
   wilayah_kerjasama varchar
+  iku list
 }
 
 Table T_ruang_lingkup {
@@ -117,6 +119,7 @@ Table T_output {
   jumlah integer
   satuan varchar
   link_bukti varchar
+  keterangan varchar
 }
 
 
