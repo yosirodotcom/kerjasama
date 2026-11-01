@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { JoinedDokumen, MitraInfo } from '@/lib/data';
+import type { JoinedDokumen, MitraInfo } from '@/types';
 import { 
   Search, Eye, XCircle, Info, 
   ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, 

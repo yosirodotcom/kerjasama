@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { JoinedDokumen } from '@/lib/data';
+import type { JoinedDokumen } from '@/types';
 import { TrendingUp, CheckCircle2, FileText, Building2, MapPin, ChevronRight, Layers } from 'lucide-react';
 import { parseAppDate } from '@/components/DataTable';
 import { isBefore } from 'date-fns';
