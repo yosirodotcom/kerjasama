@@ -3,22 +3,22 @@
 import React, { useState, useMemo } from 'react';
 import type { JoinedDokumen, MitraInfo } from '@/types';
 import { 
-  Search, Eye, XCircle, Info, 
+  Search, Eye, Info, 
   ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, 
-  RefreshCw, FolderDown, Loader2, AlertCircle, PackageCheck,
+  RefreshCw, FolderDown,
   BarChart3, FilterX, ExternalLink
 } from 'lucide-react';
-import { format } from 'date-fns';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
 import HeaderBanner from './dashboard/HeaderBanner';
 import StatsOverview from './dashboard/StatsOverview';
 import StatsFilterBar from './dashboard/StatsFilterBar';
+import ZipProgressModal from './ui/ZipProgressModal';
+import MitraDetailModal from './tables/MitraDetailModal';
 import { getStatusStyle } from '@/lib/theme';
 import { formatDisplayDate, checkStatus, parseDateForSort } from '@/lib/dateUtils';
 import { getCellValue } from '@/lib/tableUtils';
 import { exportToExcel } from '@/lib/exportExcel';
-import type { StatsFilter } from '@/types';
+import { downloadDocumentsAsZip } from '@/lib/zipDownload';
+import type { StatsFilter, ZipDownloadState } from '@/types';
 import {
   getDefaultStatsFilter, applyStatsFilter, applyPreviousStatsFilter, getJurusanOptions, getProdiGroups,
   applyPeriodAndWilayah, countByMultiField, getPeriodLabel, getComparisonLabel, getTrendSeries,
@@ -86,16 +86,6 @@ export default function DataTable({ data }: DataTableProps) {
   const [statsFilter, setStatsFilter] = useState<StatsFilter>(getDefaultStatsFilter);
 
   // ZIP Download State
-  interface ZipDownloadState {
-    isOpen: boolean;
-    total: number;
-    current: number;
-    currentName: string;
-    stage: 'preparing' | 'downloading' | 'zipping' | 'completed' | 'error';
-    errorMessage?: string;
-    successCount: number;
-    failedCount: number;
-  }
 
   const [zipState, setZipState] = useState<ZipDownloadState>({
     isOpen: false,
@@ -114,134 +104,6 @@ export default function DataTable({ data }: DataTableProps) {
       abortControllerRef.current.abort();
     }
     setZipState(prev => ({ ...prev, isOpen: false, stage: 'error', errorMessage: 'Pengunduhan dibatalkan.' }));
-  };
-
-  const handleDownloadAllZip = async () => {
-    const itemsToDownload = filteredData.filter(d => Boolean(d.link_dokumen && d.link_dokumen.trim()));
-    if (itemsToDownload.length === 0) {
-      alert('Tidak ada dokumen dengan tautan file pada hasil filter saat ini.');
-      return;
-    }
-
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    setZipState({
-      isOpen: true,
-      total: itemsToDownload.length,
-      current: 0,
-      currentName: 'Menyiapkan berkas...',
-      stage: 'preparing',
-      successCount: 0,
-      failedCount: 0,
-    });
-
-    const zip = new JSZip();
-    const usedFileNames = new Set<string>();
-    const sanitize = (str: string) => str.replace(/[/\\?%*:|"<>]/g, '_').trim();
-
-    let successCount = 0;
-    let failedCount = 0;
-    const concurrency = 3;
-    let index = 0;
-
-    const downloadWorker = async () => {
-      while (index < itemsToDownload.length) {
-        if (controller.signal.aborted) break;
-        const currentIndex = index++;
-        const item = itemsToDownload[currentIndex];
-
-        setZipState(prev => ({
-          ...prev,
-          current: currentIndex + 1,
-          currentName: item.nomor_dokumen || item.mitras[0]?.nama || `Dokumen ${currentIndex + 1}`,
-          stage: 'downloading',
-        }));
-
-        try {
-          const res = await fetch(`/api/download-proxy?url=${encodeURIComponent(item.link_dokumen || '')}`, {
-            signal: controller.signal,
-          });
-
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-          }
-
-          let fileName = '';
-          const headerName = res.headers.get('X-File-Name');
-          if (headerName) {
-            fileName = decodeURIComponent(headerName);
-          }
-
-          if (!fileName) {
-            const rawNo = item.nomor_dokumen ? sanitize(item.nomor_dokumen) : `doc_${currentIndex + 1}`;
-            const mitraName = item.mitras[0]?.nama ? `_${sanitize(item.mitras[0].nama).slice(0, 30)}` : '';
-            fileName = `${rawNo}${mitraName}.pdf`;
-          }
-
-          let finalName = fileName;
-          let counter = 1;
-          const extIndex = fileName.lastIndexOf('.');
-          const base = extIndex > 0 ? fileName.slice(0, extIndex) : fileName;
-          const ext = extIndex > 0 ? fileName.slice(extIndex) : '.pdf';
-
-          while (usedFileNames.has(finalName.toLowerCase())) {
-            counter++;
-            finalName = `${base} (${counter})${ext}`;
-          }
-          usedFileNames.add(finalName.toLowerCase());
-
-          const arrayBuf = await res.arrayBuffer();
-          zip.file(finalName, arrayBuf);
-          successCount++;
-        } catch (err) {
-          if (controller.signal.aborted) return;
-          console.error(`Gagal mengunduh dokumen ${item.nomor_dokumen}:`, err);
-          failedCount++;
-          const fallbackName = `CATATAN_GAGAL_${sanitize(item.nomor_dokumen || `doc_${currentIndex + 1}`)}.txt`;
-          zip.file(fallbackName, `Dokumen tidak dapat diunduh otomatis:\nNomor Dokumen: ${item.nomor_dokumen || '-'}\nTautan: ${item.link_dokumen}\nError: ${(err instanceof Error && err.message) || 'Unknown'}`);
-        }
-
-        setZipState(prev => ({
-          ...prev,
-          successCount,
-          failedCount,
-        }));
-      }
-    };
-
-    try {
-      const workers = Array.from({ length: Math.min(concurrency, itemsToDownload.length) }, () => downloadWorker());
-      await Promise.all(workers);
-
-      if (controller.signal.aborted) return;
-
-      if (successCount === 0 && failedCount > 0) {
-        throw new Error('Semua dokumen gagal diunduh dari tautan Google Drive.');
-      }
-
-      setZipState(prev => ({ ...prev, stage: 'zipping', currentName: 'Mengompresi ke berkas ZIP...' }));
-
-      const zipBlob = await zip.generateAsync(
-        { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } }
-      );
-
-      const timestamp = format(new Date(), 'yyyy-MM-dd_HHmm');
-      saveAs(zipBlob, `dokumen_kerja_sama_${timestamp}.zip`);
-
-      setZipState(prev => ({
-        ...prev,
-        stage: 'completed',
-        currentName: `Selesai! Berhasil mengemas ${successCount} dokumen.`,
-      }));
-    } catch (err) {
-      if (controller.signal.aborted) return;
-      setZipState(prev => ({
-        ...prev,
-        stage: 'error',
-        errorMessage: (err instanceof Error && err.message) || 'Terjadi kesalahan saat mengunduh dokumen.',
-      }));
-    }
   };
 
   const handleSync = async () => {
@@ -305,9 +167,6 @@ export default function DataTable({ data }: DataTableProps) {
     setActivePillFilter('Semua');
     setCurrentPage(1);
   };
-
-  const handleExport = () =>
-    exportToExcel(filteredData, COLUMNS.filter(col => visibleCols.has(col.key) && col.key !== 'id'));
 
   const enrichedData = useMemo(() => {
     return data.map((row, idx) => ({
@@ -403,11 +262,38 @@ export default function DataTable({ data }: DataTableProps) {
     return filteredData.slice(start, start + itemsPerPage);
   }, [filteredData, currentPage, itemsPerPage]);
 
-  React.useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(1);
+  // Reset to page 1 when the current page no longer exists (adjust state during render).
+  if (currentPage > totalPages) {
+    setCurrentPage(1);
+  }
+
+  const handleDownloadAllZip = async () => {
+    const itemsToDownload = filteredData.filter(d => Boolean(d.link_dokumen && d.link_dokumen.trim()));
+    if (itemsToDownload.length === 0) {
+      alert('Tidak ada dokumen dengan tautan file pada hasil filter saat ini.');
+      return;
     }
-  }, [filteredData.length, currentPage, totalPages]);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setZipState({
+      isOpen: true,
+      total: itemsToDownload.length,
+      current: 0,
+      currentName: 'Menyiapkan berkas...',
+      stage: 'preparing',
+      successCount: 0,
+      failedCount: 0,
+    });
+
+    await downloadDocumentsAsZip(itemsToDownload, controller.signal, patch =>
+      setZipState(prev => ({ ...prev, ...patch }))
+    );
+  };
+
+  const handleExport = () =>
+    exportToExcel(filteredData, COLUMNS.filter(col => visibleCols.has(col.key) && col.key !== 'id'));
 
   const hasActiveFilters = Boolean(globalSearch || Object.values(colFilters).some(Boolean) || activePillFilter !== 'Semua');
 
@@ -805,230 +691,17 @@ export default function DataTable({ data }: DataTableProps) {
       </main>
 
       {/* MODAL 1: Mitra Detail Modal (SDGs Theme Clean White & Sky) */}
-      {selectedMitra && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-sky-100 max-w-lg w-full overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-sky-100 flex justify-between items-start bg-gradient-to-r from-sky-50/80 to-white">
-              <div>
-                <h3 className="text-xl font-bold text-slate-900">{selectedMitra.nama}</h3>
-                <p className="text-sky-700 font-semibold text-xs mt-1 bg-sky-100/60 inline-block px-2 py-0.5 rounded-md">
-                  {selectedMitra.kategori || 'Kategori Umum'}
-                </p>
-              </div>
-              <button 
-                onClick={() => setSelectedMitra(null)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-400 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors"
-              >
-                <XCircle className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4 max-h-[65vh] overflow-y-auto custom-scrollbar">
-              {selectedMitra.logo && (
-                <div className="flex flex-col items-center justify-center mb-4">
-                  <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center border border-slate-200 overflow-hidden shadow-inner p-2">
-                    <img 
-                      src={`/${selectedMitra.logo}`} 
-                      alt={`Logo ${selectedMitra.nama}`} 
-                      className="w-full h-full object-contain" 
-                      onError={(e) => { 
-                        e.currentTarget.style.display = 'none'; 
-                        e.currentTarget.parentElement!.innerHTML = '<span class="text-xs text-slate-400 text-center font-medium">No Image</span>'; 
-                      }} 
-                    />
-                  </div>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                <div className="bg-sky-50/70 p-4 rounded-xl border border-sky-200/80 shadow-2xs">
-                  <p className="text-[10px] text-sky-800 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <Info className="w-3 h-3 text-sky-600"/> Penandatangan Mitra
-                  </p>
-                  <p className="font-bold text-slate-900 text-sm mb-1">{selectedMitra.penandatangan_mitra || '-'}</p>
-                  {(selectedMitra.penandatangan_mitra_telepon || selectedMitra.penandatangan_mitra_email) && (
-                    <div className="mt-1.5 pt-1.5 border-t border-sky-200/60 text-xs text-sky-900 space-y-1">
-                      {selectedMitra.penandatangan_mitra_telepon && <p className="flex items-center gap-1.5">📞 {selectedMitra.penandatangan_mitra_telepon}</p>}
-                      {selectedMitra.penandatangan_mitra_email && <p className="flex items-center gap-1.5 break-all">✉️ {selectedMitra.penandatangan_mitra_email}</p>}
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200/80 shadow-2xs">
-                  <p className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <Info className="w-3 h-3 text-emerald-600"/> PIC Mitra
-                  </p>
-                  <p className="font-bold text-slate-900 text-sm mb-1">{selectedMitra.pic_mitra || '-'}</p>
-                  {(selectedMitra.pic_mitra_telepon || selectedMitra.pic_mitra_email) && (
-                    <div className="mt-1.5 pt-1.5 border-t border-emerald-200/60 text-xs text-emerald-900 space-y-1">
-                      {selectedMitra.pic_mitra_telepon && <p className="flex items-center gap-1.5">📞 {selectedMitra.pic_mitra_telepon}</p>}
-                      {selectedMitra.pic_mitra_email && <p className="flex items-center gap-1.5 break-all">✉️ {selectedMitra.pic_mitra_email}</p>}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-1.5">
-                  Informasi Kontak & Alamat
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2.5 gap-x-4 text-xs">
-                  {selectedMitra.email_mitra && (
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Email Mitra</p>
-                      <p className="text-slate-800 font-medium break-all">{selectedMitra.email_mitra}</p>
-                    </div>
-                  )}
-                  {selectedMitra.telepon_mitra && (
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Telepon Mitra</p>
-                      <p className="text-slate-800 font-medium">{selectedMitra.telepon_mitra}</p>
-                    </div>
-                  )}
-                  {selectedMitra.website_mitra && (
-                    <div className="md:col-span-2">
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Website Resmi</p>
-                      <a 
-                        href={selectedMitra.website_mitra.startsWith('http') ? selectedMitra.website_mitra : `https://${selectedMitra.website_mitra}`} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="text-sky-600 font-semibold hover:underline break-all flex items-center gap-1 mt-0.5"
-                      >
-                        {selectedMitra.website_mitra}
-                        <ExternalLink className="w-3 h-3 inline" />
-                      </a>
-                    </div>
-                  )}
-                  {selectedMitra.alamat && (
-                    <div className="md:col-span-2">
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Alamat</p>
-                      <p className="text-slate-700 leading-relaxed mt-0.5">{selectedMitra.alamat}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {selectedMitra.profil && (
-                <div>
-                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Profil Singkat</p>
-                  <p className="text-slate-700 text-xs leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
-                    {selectedMitra.profil}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
-              <button 
-                onClick={() => setSelectedMitra(null)}
-                className="px-5 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl font-semibold text-xs hover:bg-slate-100 transition-colors shadow-xs"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <MitraDetailModal
+        mitra={selectedMitra}
+        onClose={() => setSelectedMitra(null)}
+      />
 
       {/* MODAL 2: ZIP Download Progress Modal (SDGs Theme) */}
-      {zipState.isOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[110] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-sky-100 max-w-md w-full overflow-hidden p-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center border shadow-xs ${
-                zipState.stage === 'completed'
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
-                  : zipState.stage === 'error'
-                  ? 'bg-rose-50 border-rose-200 text-rose-600'
-                  : 'bg-orange-50 border-orange-200 text-orange-600'
-              }`}>
-                {zipState.stage === 'completed' ? (
-                  <PackageCheck className="w-6 h-6" />
-                ) : zipState.stage === 'error' ? (
-                  <AlertCircle className="w-6 h-6" />
-                ) : zipState.stage === 'zipping' ? (
-                  <Loader2 className="w-6 h-6 animate-spin text-sky-600" />
-                ) : (
-                  <FolderDown className="w-6 h-6 animate-bounce" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-base font-bold text-slate-900">
-                  {zipState.stage === 'completed' ? 'Unduhan Selesai' : zipState.stage === 'error' ? 'Gagal Mengunduh' : 'Mengunduh Dokumen Kerja Sama (ZIP)'}
-                </h3>
-                <p className="text-xs text-slate-500 truncate">
-                  {zipState.stage === 'zipping'
-                    ? 'Mengompresi berkas ke format ZIP...'
-                    : zipState.stage === 'completed'
-                    ? `${zipState.successCount} dokumen berhasil dikemas`
-                    : zipState.stage === 'error'
-                    ? (zipState.errorMessage || 'Terjadi kesalahan')
-                    : `Memproses ${zipState.current} dari ${zipState.total} berkas`}
-                </p>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            {zipState.stage !== 'error' && (
-              <div className="mb-4">
-                <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200 p-0.5 shadow-inner">
-                  <div 
-                    className="bg-gradient-to-r from-sky-500 via-teal-500 to-emerald-500 h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${zipState.total > 0 ? Math.min(100, Math.round((zipState.current / zipState.total) * 100)) : 0}%`
-                    }}
-                  />
-                </div>
-                <div className="flex justify-between items-center text-xs text-slate-500 mt-2 font-mono">
-                  <span>{zipState.current} / {zipState.total} Dokumen</span>
-                  <span className="font-bold text-sky-600">
-                    {zipState.total > 0 ? Math.round((zipState.current / zipState.total) * 100) : 0}%
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Current Item Name */}
-            {zipState.stage === 'downloading' && (
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl mb-4 text-xs">
-                <span className="text-slate-400 block mb-0.5">Sedang mengunduh:</span>
-                <span className="text-slate-800 font-semibold break-all">{zipState.currentName}</span>
-              </div>
-            )}
-
-            {/* Badges info */}
-            <div className="flex items-center gap-2 mb-5 text-xs">
-              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
-                Berhasil: {zipState.successCount}
-              </span>
-              {zipState.failedCount > 0 && (
-                <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-semibold">
-                  Gagal: {zipState.failedCount}
-                </span>
-              )}
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-              {zipState.stage === 'downloading' || zipState.stage === 'preparing' || zipState.stage === 'zipping' ? (
-                <button
-                  onClick={handleCancelZip}
-                  className="px-4 py-2 bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-600 rounded-xl text-xs font-semibold transition-colors border border-slate-200"
-                >
-                  Batal
-                </button>
-              ) : (
-                <button
-                  onClick={() => setZipState(prev => ({ ...prev, isOpen: false }))}
-                  className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-xs"
-                >
-                  Tutup
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <ZipProgressModal
+        state={zipState}
+        onCancel={handleCancelZip}
+        onClose={() => setZipState(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

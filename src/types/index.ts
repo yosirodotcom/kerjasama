@@ -43,3 +43,15 @@ export interface StatsDateRange {
   start: Date;
   end: Date;
 }
+
+/** Progress state of the bulk "ZIP Dokumen" download. */
+export interface ZipDownloadState {
+  isOpen: boolean;
+  total: number;
+  current: number;
+  currentName: string;
+  stage: 'preparing' | 'downloading' | 'zipping' | 'completed' | 'error';
+  errorMessage?: string;
+  successCount: number;
+  failedCount: number;
+}
