@@ -9,14 +9,15 @@ import {
   BarChart3, FilterX, ExternalLink
 } from 'lucide-react';
 import { format } from 'date-fns';
-import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import HeaderBanner from './dashboard/HeaderBanner';
 import StatsOverview from './dashboard/StatsOverview';
 import StatsFilterBar from './dashboard/StatsFilterBar';
 import { getStatusStyle } from '@/lib/theme';
-import { parseAppDate, formatDisplayDate, checkStatus, parseDateForSort } from '@/lib/dateUtils';
+import { formatDisplayDate, checkStatus, parseDateForSort } from '@/lib/dateUtils';
+import { getCellValue } from '@/lib/tableUtils';
+import { exportToExcel } from '@/lib/exportExcel';
 import type { StatsFilter } from '@/types';
 import {
   getDefaultStatsFilter, applyStatsFilter, applyPreviousStatsFilter, getJurusanOptions, getProdiGroups,
@@ -63,10 +64,6 @@ const COLUMNS: Column[] = [
   { key: 'prodi', label: 'Prodi', defaultVisible: false, type: 'text' },
   { key: 'rektorat', label: 'Rektorat', defaultVisible: false, type: 'text' },
 ];
-
-/** Reads a row field by dynamic column key as a string (empty when missing). */
-const getCellValue = (row: object, key: string): string =>
-  String((row as Record<string, unknown>)[key] || '');
 
 export default function DataTable({ data }: DataTableProps) {
   const [globalSearch, setGlobalSearch] = useState('');
@@ -309,113 +306,8 @@ export default function DataTable({ data }: DataTableProps) {
     setCurrentPage(1);
   };
 
-  const handleExport = async () => {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Data Kerja Sama POLNEP');
-
-    // Filter columns based on visibility
-    const columnsToExport = COLUMNS.filter(col => visibleCols.has(col.key) && col.key !== 'id');
-
-    // Define columns for ExcelJS
-    worksheet.columns = columnsToExport.map(col => ({
-      header: col.label,
-      key: col.key,
-      width: col.key === 'tentang' || col.key === 'deskripsi' || col.key === 'judul_dokumen' ? 50 : 20
-    }));
-
-    // Style the header matching SDGs Indonesia Cerulean Primary Theme
-    const headerRow = worksheet.getRow(1);
-    columnsToExport.forEach((_, colIndex) => {
-      const cell = headerRow.getCell(colIndex + 1);
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF0284C7' } // Sky-600 (SDGs Primary Blue)
-      };
-      cell.alignment = { vertical: 'middle', horizontal: 'center' };
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FF0369A1' } },
-        left: { style: 'thin', color: { argb: 'FF0369A1' } },
-        bottom: { style: 'thin', color: { argb: 'FF0369A1' } },
-        right: { style: 'thin', color: { argb: 'FF0369A1' } }
-      };
-    });
-
-    // Add data rows
-    filteredData.forEach((row, index) => {
-      const rowValues: Record<string, string | number | Date> = {};
-      columnsToExport.forEach(col => {
-        if (col.key === 'no') {
-          rowValues[col.key] = index + 1;
-        } else if (col.key === 'mitra') {
-          rowValues[col.key] = row.mitras.map(m => m.nama).join(', ');
-        } else if (col.key === 'status') {
-          rowValues[col.key] = row.status;
-        } else if (['tanggal_penetapan', 'tanggal_mulai', 'tanggal_berakhir'].includes(col.key)) {
-          const dStr = getCellValue(row, col.key);
-          if (dStr) {
-            const parsed = parseAppDate(dStr);
-            if (parsed) {
-              const tzOffset = parsed.getTimezoneOffset() * 60000;
-              rowValues[col.key] = new Date(parsed.getTime() - tzOffset);
-            } else {
-              rowValues[col.key] = dStr;
-            }
-          } else {
-            rowValues[col.key] = '';
-          }
-        } else {
-          rowValues[col.key] = getCellValue(row, col.key);
-        }
-      });
-      const addedRow = worksheet.addRow(rowValues);
-      
-      // Soft sky-50 zebra striping
-      if (index % 2 === 1) {
-        addedRow.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFF0F9FF' } // Sky-50
-        };
-      }
-
-      // Border, alignment and Hyperlinks
-      addedRow.eachCell((cell, colNumber) => {
-        const colKey = columnsToExport[colNumber - 1].key;
-        
-        cell.border = {
-          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
-        };
-        
-        cell.alignment = { vertical: 'middle', wrapText: true };
-
-        // Apply Hyperlink to Nomor Dokumen
-        if (colKey === 'nomor_dokumen' && row.link_dokumen) {
-          cell.value = {
-            text: row.nomor_dokumen || 'Link',
-            hyperlink: row.link_dokumen,
-            tooltip: 'Klik untuk membuka dokumen'
-          };
-          cell.font = { color: { argb: 'FF0284C7' }, underline: true };
-        }
-
-        // Apply Date Format
-        if (['tanggal_penetapan', 'tanggal_mulai', 'tanggal_berakhir'].includes(colKey)) {
-          cell.numFmt = 'dd/mm/yyyy';
-          cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        }
-      });
-    });
-
-    // Write and save
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `data_kerja_sama_${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
+  const handleExport = () =>
+    exportToExcel(filteredData, COLUMNS.filter(col => visibleCols.has(col.key) && col.key !== 'id'));
 
   const enrichedData = useMemo(() => {
     return data.map((row, idx) => ({
