@@ -8,7 +8,7 @@ import {
   RefreshCw, FolderDown, Loader2, AlertCircle, PackageCheck,
   BarChart3, FilterX, ExternalLink
 } from 'lucide-react';
-import { isBefore, parse, isValid, format } from 'date-fns';
+import { format } from 'date-fns';
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -16,6 +16,7 @@ import HeaderBanner from './dashboard/HeaderBanner';
 import StatsOverview from './dashboard/StatsOverview';
 import StatsFilterBar from './dashboard/StatsFilterBar';
 import { getStatusStyle } from '@/lib/theme';
+import { parseAppDate, formatDisplayDate, checkStatus, parseDateForSort } from '@/lib/dateUtils';
 import type { StatsFilter } from '@/types';
 import {
   getDefaultStatsFilter, applyStatsFilter, applyPreviousStatsFilter, getJurusanOptions, getProdiGroups,
@@ -62,67 +63,6 @@ const COLUMNS: Column[] = [
   { key: 'prodi', label: 'Prodi', defaultVisible: false, type: 'text' },
   { key: 'rektorat', label: 'Rektorat', defaultVisible: false, type: 'text' },
 ];
-
-export const parseAppDate = (dStr: string | null | undefined): Date | null => {
-  if (!dStr) return null;
-  const s = String(dStr).trim();
-  if (!s) return null;
-
-  // 1. ISO standard yyyy-MM-dd
-  let parsed = parse(s, 'yyyy-MM-dd', new Date());
-  if (isValid(parsed)) return parsed;
-
-  // 2. Indonesian formats (Day first)
-  parsed = parse(s, 'dd/MM/yyyy', new Date());
-  if (isValid(parsed)) return parsed;
-
-  parsed = parse(s, 'd/M/yyyy', new Date());
-  if (isValid(parsed)) return parsed;
-
-  parsed = parse(s, 'dd-MM-yyyy', new Date());
-  if (isValid(parsed)) return parsed;
-
-  parsed = parse(s, 'd-M-yyyy', new Date());
-  if (isValid(parsed)) return parsed;
-
-  // 3. Fallback US formats (Month first)
-  parsed = parse(s, 'MM/dd/yyyy', new Date());
-  if (isValid(parsed)) return parsed;
-
-  parsed = parse(s, 'M/d/yyyy', new Date());
-  if (isValid(parsed)) return parsed;
-
-  const native = new Date(s);
-  if (isValid(native)) return native;
-
-  return null;
-};
-
-export const formatDisplayDate = (dStr: string | null | undefined): string => {
-  if (!dStr) return '-';
-  const parsed = parseAppDate(dStr);
-  if (!parsed) return dStr;
-  return format(parsed, 'dd/MM/yyyy');
-};
-
-const checkStatus = (tgl_berakhir: string) => {
-  if (!tgl_berakhir) return 'Unknown';
-  try {
-    const parsed = parseAppDate(tgl_berakhir);
-    if (!parsed) return 'Unknown';
-
-    const isExpired = isBefore(parsed, new Date());
-    return isExpired ? 'Expired' : 'Active';
-  } catch {
-    return 'Unknown';
-  }
-};
-
-const parseDateForSort = (dStr: string) => {
-  if (!dStr) return 0;
-  const parsed = parseAppDate(dStr);
-  return parsed ? parsed.getTime() : 0;
-};
 
 /** Reads a row field by dynamic column key as a string (empty when missing). */
 const getCellValue = (row: object, key: string): string =>
