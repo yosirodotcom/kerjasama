@@ -290,6 +290,7 @@ export default function DataTable({ data }: DataTableProps) {
             filter={statsFilter}
             onChange={(nextFilter) => {
               setStatsFilter(nextFilter);
+              setColFilters({});
               setCurrentPage(1);
             }}
             jurusanOptions={jurusanOptions}
@@ -458,7 +459,7 @@ export default function DataTable({ data }: DataTableProps) {
           onSort={handleSort}
           colFilters={colFilters}
           onColFilterChange={(key, value) => setColFilters(prev => ({ ...prev, [key]: value }))}
-          enrichedData={enrichedData}
+          enrichedData={statsData}
           paginatedData={paginatedData}
           totalFilteredCount={filteredData.length}
           currentPage={currentPage}

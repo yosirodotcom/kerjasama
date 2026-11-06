@@ -44,6 +44,7 @@ def generate_ts_data():
     mMitra = pd.read_csv(f"{data_dir}/M_mitra_bekerjasama.csv", dtype=str)
     tMitra = pd.read_csv(f"{data_dir}/T_mitra.csv", dtype=str)
     tPerson = pd.read_csv(f"{data_dir}/T_person.csv", dtype=str)
+    tKeg = pd.read_csv(f"{data_dir}/T_kegiatan.csv", dtype=str) if os.path.exists(f"{data_dir}/T_kegiatan.csv") else pd.DataFrame()
     mKeg = pd.read_csv(f"{data_dir}/M_kegiatan_kerjasama.csv", dtype=str) if os.path.exists(f"{data_dir}/M_kegiatan_kerjasama.csv") else pd.DataFrame()
     mUnit = pd.read_csv(f"{data_dir}/M_unit_pelaksana_kerjasama.csv", dtype=str) if os.path.exists(f"{data_dir}/M_unit_pelaksana_kerjasama.csv") else pd.DataFrame()
     tUnit = pd.read_csv(f"{data_dir}/T_unit_pelaksana_kegiatan.csv", dtype=str) if os.path.exists(f"{data_dir}/T_unit_pelaksana_kegiatan.csv") else pd.DataFrame()
@@ -52,6 +53,7 @@ def generate_ts_data():
     mitra_map = {safe(r.get('id')): r.to_dict() for _,r in tMitra.iterrows() if safe(r.get('id'))}
     person_map = {safe(r.get('id')): r.to_dict() for _,r in tPerson.iterrows() if safe(r.get('id'))}
     unit_map = {safe(r.get('id')): r.to_dict() for _,r in tUnit.iterrows() if safe(r.get('id'))}
+    keg_map = {safe(r.get('id')): r.to_dict() for _,r in tKeg.iterrows() if safe(r.get('id'))}
 
     # Map activity ID (ref_kegiatan) -> list of unit records
     keg_units = {}
@@ -154,6 +156,26 @@ def generate_ts_data():
                 if p_item and p_item not in prodi_list: prodi_list.append(p_item)
                 if r and r not in rektorat_list: rektorat_list.append(r)
 
+        # Collect kategori kegiatan and dates from associated activities in T_kegiatan
+        kategori_kegiatan_list = []
+        sub_kategori_list = []
+        selesai_dates = []
+        for kid in kids:
+            k_info = keg_map.get(kid, {})
+            kat = safe(k_info.get('kategori_kegiatan'))
+            sub = safe(k_info.get('sub_kategori'))
+            t_sel = normalize_date(k_info.get('tgl_selesai'), dok.name)
+            if kat and kat not in kategori_kegiatan_list:
+                kategori_kegiatan_list.append(kat)
+            if sub and sub not in sub_kategori_list:
+                sub_kategori_list.append(sub)
+            if t_sel:
+                selesai_dates.append(t_sel)
+
+        program_val = ', '.join(kategori_kegiatan_list) if kategori_kegiatan_list else safe(dok.get('program'))
+        sub_kategori_val = ', '.join(sub_kategori_list)
+        tgl_selesai_keg = max(selesai_dates) if selesai_dates else ''
+
         records.append({
             'id': did,
             'jenis_dokumen': safe(p.get('jenis_dokumen')),
@@ -163,11 +185,13 @@ def generate_ts_data():
             'tanggal_penetapan': normalize_date(dok.get('tanggal_penetapan'), dok.name),
             'tanggal_mulai': normalize_date(dok.get('tanggal_mulai'), dok.name),
             'tanggal_berakhir': normalize_date(dok.get('tanggal_berakhir'), dok.name),
+            'tgl_selesai_kegiatan': tgl_selesai_keg,
             'deskripsi': safe(dok.get('deskripsi')),
             'ref_mou': safe(dok.get('ref_mou')),
             'nama_penandatangan': safe(pndt_polnep.get('nama')),
             'jabatan_penandatangan': safe(dok.get('jabatan_penandatangan')),
-            'program': safe(dok.get('program')),
+            'program': program_val,
+            'sub_kategori': sub_kategori_val,
             'wilayah_kerjasama': wilayah,
             'judul_dokumen': safe(p.get('judul_dokumen')),
             'nama_inisiator': safe(inisiator.get('nama')),
@@ -210,11 +234,13 @@ export interface JoinedDokumen {{
   tanggal_penetapan: string;
   tanggal_mulai: string;
   tanggal_berakhir: string;
+  tgl_selesai_kegiatan?: string;
   deskripsi?: string;
   ref_mou?: string;
   nama_penandatangan?: string;
   jabatan_penandatangan?: string;
   program?: string;
+  sub_kategori?: string;
   wilayah_kerjasama?: string;
   judul_dokumen?: string;
   nama_inisiator?: string;

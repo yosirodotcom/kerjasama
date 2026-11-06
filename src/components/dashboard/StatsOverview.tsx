@@ -71,6 +71,46 @@ export default function StatsOverview({
     };
   }, [data, total]);
 
+  // Rasio kerja sama aktif mengacu pada T_kegiatan.tgl_selesai
+  const kerjaSamaStatusCounts = React.useMemo(() => {
+    const ksList = data.filter((d) => {
+      const j = (d.jenis_dokumen || '').toUpperCase();
+      return j.includes('PKS') || j.includes('PERJANJIAN KERJA') || j.includes('PSM') || j.includes('KONTRAK');
+    });
+
+    const targetList = ksList.length > 0 ? ksList : data;
+    const totalKS = targetList.length || 1;
+
+    let active = 0;
+    let expired = 0;
+    let unknown = 0;
+
+    targetList.forEach((d) => {
+      const effectiveEnd = d.tgl_selesai_kegiatan || d.tanggal_berakhir;
+      if (!effectiveEnd) {
+        unknown++;
+        return;
+      }
+      const parsed = parseAppDate(effectiveEnd);
+      if (!parsed) {
+        unknown++;
+      } else if (isBefore(parsed, new Date())) {
+        expired++;
+      } else {
+        active++;
+      }
+    });
+
+    return {
+      total: totalKS,
+      active,
+      expired,
+      unknown,
+      activePct: Math.round((active / totalKS) * 100),
+      expiredPct: Math.round((expired / totalKS) * 100),
+    };
+  }, [data]);
+
   const jenisCounts = React.useMemo(() => {
     let mou = 0;
     let pks = 0;
@@ -92,6 +132,38 @@ export default function StatsOverview({
       lainnyaPct: Math.max(0, 100 - Math.round((mou / total) * 100) - Math.round((pks / total) * 100)),
     };
   }, [data, total]);
+
+  const detailedDocCounts = React.useMemo(() => {
+    let pks = 0;
+    let mou = 0;
+    let psm = 0;
+    let kontrak = 0;
+    let lainnya = 0;
+
+    data.forEach((d) => {
+      const j = (d.jenis_dokumen || '').toUpperCase();
+      if (j.includes('PKS') || j.includes('PERJANJIAN KERJASAMA') || j.includes('PERJANJIAN KERJA SAMA')) pks++;
+      else if (j.includes('MOU')) mou++;
+      else if (j.includes('PSM')) psm++;
+      else if (j.includes('KONTRAK')) kontrak++;
+      else lainnya++;
+    });
+
+    return { pks, mou, psm, kontrak, lainnya };
+  }, [data]);
+
+  const pksFollowUpCount = React.useMemo(() => {
+    return data.filter((d) => {
+      const j = (d.jenis_dokumen || '').toUpperCase();
+      const isPks = j.includes('PKS') || j.includes('PERJANJIAN KERJASAMA') || j.includes('PERJANJIAN KERJA SAMA');
+      return isPks && Boolean(d.ref_mou && d.ref_mou.trim());
+    }).length;
+  }, [data]);
+
+  // Kerja sama implementatif/operasional (PKS, PSM, Kontrak)
+  const totalKerjaSama = React.useMemo(() => {
+    return detailedDocCounts.pks + detailedDocCounts.psm + detailedDocCounts.kontrak;
+  }, [detailedDocCounts]);
 
   const uniqueMitraCount = React.useMemo(() => {
     const names = new Set<string>();
@@ -142,14 +214,14 @@ export default function StatsOverview({
 
         {/* 3 Main Stat Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Card 1: Perkembangan Dokumen (Line Trend Area) */}
+          {/* Card 1: Perkembangan Kerja Sama & Dokumen */}
           <div className="bg-gradient-to-b from-sky-50/50 to-white p-4 sm:p-5 rounded-xl border border-sky-100 flex flex-col justify-between relative overflow-hidden group">
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">Total Dokumen Kerja Sama</span>
+                <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">Total Kerja Sama</span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl font-extrabold text-slate-900">{data.length}</span>
-                  <span className="text-xs text-slate-500 font-medium">berkas</span>
+                  <span className="text-3xl font-extrabold text-slate-900">{totalKerjaSama}</span>
+                  <span className="text-xs text-slate-500 font-semibold">kerja sama</span>
                 </div>
               </div>
               {growth && (
@@ -166,8 +238,40 @@ export default function StatsOverview({
               )}
             </div>
 
+            {/* Sub-info: Tindak Lanjut MoU & Rincian Dokumen per Jenis */}
+            <div className="my-2.5 space-y-2">
+              {/* Keterangan Tindak Lanjut MoU */}
+              <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-sky-50/80 border border-sky-200/60 text-xs">
+                <span className="text-slate-600 font-medium">Tindak Lanjut MoU Sebelumnya:</span>
+                <span className="font-bold text-sky-800">
+                  {pksFollowUpCount} PKS
+                </span>
+              </div>
+
+              {/* Keterangan Dokumen per Jenis */}
+              <div className="pt-1.5 border-t border-slate-100">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                  <span className="font-semibold text-slate-700">Total {data.length} Dokumen:</span>
+                  <span className="text-[10px] text-slate-400">({totalKerjaSama} Kerja Sama + {detailedDocCounts.mou} MoU{detailedDocCounts.lainnya > 0 ? ` + ${detailedDocCounts.lainnya} Lainnya` : ''})</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1 text-[10px] text-slate-600">
+                  <span className="px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 font-semibold" title="Perjanjian Kerja Sama">PKS: {detailedDocCounts.pks}</span>
+                  {detailedDocCounts.psm > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 font-semibold" title="Perjanjian Swakelola Mitra">PSM: {detailedDocCounts.psm}</span>
+                  )}
+                  {detailedDocCounts.kontrak > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 font-semibold" title="Kontrak">Kontrak: {detailedDocCounts.kontrak}</span>
+                  )}
+                  <span className="px-1.5 py-0.5 rounded bg-slate-100 font-medium text-slate-600" title="Nota Kesepahaman (Payung)">MoU: {detailedDocCounts.mou}</span>
+                  {detailedDocCounts.lainnya > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 font-medium text-slate-600" title="Rencana Implementasi / Lainnya">Lainnya: {detailedDocCounts.lainnya}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Trend Line Chart (documents per bucket in the active period) */}
-            <div className="w-full h-20 my-3 relative">
+            <div className="w-full h-12 my-1 relative">
               {trendPaths ? (
                 <svg viewBox="0 0 200 60" preserveAspectRatio="none" className="w-full h-full overflow-visible">
                   <defs>
@@ -201,7 +305,7 @@ export default function StatsOverview({
             </div>
           </div>
 
-          {/* Card 2: Circular Gauge Capaian Dokumen Aktif */}
+          {/* Card 2: Circular Gauge Capaian Kerja Sama Aktif */}
           <div className="bg-gradient-to-b from-sky-50/50 to-white p-4 sm:p-5 rounded-xl border border-sky-100 flex flex-col items-center justify-between text-center">
             <span className="text-xs font-bold text-sky-800 uppercase tracking-wider self-start">
               Capaian Rasio Aktif
@@ -227,14 +331,14 @@ export default function StatsOverview({
                   fill="none"
                   stroke="#0284C7"
                   strokeWidth="3.5"
-                  strokeDasharray={`${statusCounts.activePct}, 100`}
+                  strokeDasharray={`${kerjaSamaStatusCounts.activePct}, 100`}
                   strokeLinecap="round"
                 />
               </svg>
               {/* Inner Text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-2xl font-black text-slate-800">
-                  {statusCounts.activePct}%
+                  {kerjaSamaStatusCounts.activePct}%
                 </span>
                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">
                   Status Aktif
@@ -243,8 +347,12 @@ export default function StatsOverview({
             </div>
 
             <div className="w-full pt-2 border-t border-slate-100 text-[11px] flex justify-between text-slate-500">
-              <span>{statusCounts.active} Berkas Aktif</span>
-              <span className="text-sky-600 font-semibold">{statusCounts.expired} Expired</span>
+              <span className="font-medium text-slate-700">
+                <span className="font-bold text-sky-700">{kerjaSamaStatusCounts.active}</span> Kerja Sama Aktif
+              </span>
+              <span className="text-slate-500 font-medium">
+                <span className="font-semibold text-rose-600">{kerjaSamaStatusCounts.expired}</span> Selesai
+              </span>
             </div>
           </div>
 
