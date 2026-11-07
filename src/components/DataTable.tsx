@@ -313,6 +313,14 @@ export default function DataTable({ data }: DataTableProps) {
               setColFilters(prev => ({ ...prev, jenis_dokumen: jenis }));
               setCurrentPage(1);
             }}
+            onFilterProgram={(program) => {
+              setColFilters(prev => ({ ...prev, program }));
+              setCurrentPage(1);
+            }}
+            onFilterIku={(iku) => {
+              setColFilters(prev => ({ ...prev, iku }));
+              setCurrentPage(1);
+            }}
           />
           </>
         )}

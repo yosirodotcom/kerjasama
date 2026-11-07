@@ -36,6 +36,7 @@ export const COLUMNS: Column[] = [
   { key: 'jabatan_penandatangan', label: 'Jabatan Penandatangan', defaultVisible: false, type: 'text' },
   { key: 'program', label: 'Kategori Kerja Sama', defaultVisible: false, type: 'category' },
   { key: 'sub_kategori', label: 'Sub Kategori', defaultVisible: false, type: 'category' },
+  { key: 'iku', label: 'IKU', defaultVisible: false, type: 'category' },
   { key: 'wilayah_kerjasama', label: 'Wilayah', defaultVisible: true, type: 'category' },
   { key: 'judul_dokumen', label: 'Judul Dokumen', defaultVisible: false, type: 'text' },
   { key: 'nama_inisiator', label: 'Inisiator', defaultVisible: false, type: 'text' },

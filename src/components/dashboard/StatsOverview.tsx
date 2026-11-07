@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { JoinedDokumen } from '@/types';
-import { TrendingUp, CheckCircle2, FileText, Building2, MapPin, ChevronRight, Layers } from 'lucide-react';
+import { TrendingUp, FileText, MapPin, ChevronRight, ChevronLeft, Layers } from 'lucide-react';
 import { parseAppDate } from '@/lib/dateUtils';
 import { isBefore } from 'date-fns';
 
@@ -10,6 +10,8 @@ interface StatsOverviewProps {
   data: JoinedDokumen[];
   onFilterStatus?: (status: string) => void;
   onFilterJenis?: (jenis: string) => void;
+  onFilterProgram?: (program: string) => void;
+  onFilterIku?: (iku: string) => void;
   /** Label of the active filter period, e.g. "Tahun 2026". */
   periodLabel?: string;
   /** Label of the comparison period, e.g. "vs 2025". */
@@ -33,6 +35,8 @@ export default function StatsOverview({
   data,
   onFilterStatus,
   onFilterJenis,
+  onFilterProgram,
+  onFilterIku,
   periodLabel = 'Semua Periode',
   comparisonLabel = '',
   previousCount,
@@ -41,35 +45,115 @@ export default function StatsOverview({
   // Aggregate real-time statistics
   const total = data.length || 1;
 
-  const statusCounts = React.useMemo(() => {
-    let active = 0;
-    let expired = 0;
-    let unknown = 0;
+  // Proporsi dan jumlah kerja sama yang mendukung IKU (mengacu pada T_kegiatan.iku)
+  const ikuStats = React.useMemo(() => {
+    const ksList = data.filter((d) => {
+      const j = (d.jenis_dokumen || '').toUpperCase();
+      return (
+        j.includes('PKS') ||
+        j.includes('PERJANJIAN KERJA') ||
+        j.includes('PSM') ||
+        j.includes('KONTRAK')
+      );
+    });
 
-    data.forEach((d) => {
-      if (!d.tanggal_berakhir) {
-        unknown++;
-        return;
-      }
-      const parsed = parseAppDate(d.tanggal_berakhir);
-      if (!parsed) {
-        unknown++;
-      } else if (isBefore(parsed, new Date())) {
-        expired++;
+    const targetList = ksList.length > 0 ? ksList : data;
+    const totalKS = targetList.length || 1;
+
+    const countMap: Record<string, number> = {};
+    let totalWithIku = 0;
+    let nonIkuCount = 0;
+
+    targetList.forEach((d) => {
+      const rawIku = (d.iku || '').trim();
+      if (!rawIku || rawIku === '-' || rawIku.toLowerCase() === 'non-iku' || rawIku.toLowerCase() === 'nan') {
+        nonIkuCount++;
       } else {
-        active++;
+        const items = rawIku.split(',').map((s) => s.trim()).filter(Boolean);
+        if (items.length === 0) {
+          nonIkuCount++;
+        } else {
+          items.forEach((item) => {
+            countMap[item] = (countMap[item] || 0) + 1;
+          });
+          totalWithIku++;
+        }
       }
     });
 
-    return {
-      active,
-      expired,
-      unknown,
-      activePct: Math.round((active / total) * 100),
-      expiredPct: Math.round((expired / total) * 100),
-      unknownPct: Math.round((unknown / total) * 100),
+    const colorConfig: Record<string, { stroke: string; dotClass: string }> = {
+      'IKU 5': { stroke: '#0284C7', dotClass: 'bg-sky-600' },
+      'IKU 9': { stroke: '#7C3AED', dotClass: 'bg-violet-600' },
+      'IKU 2': { stroke: '#0D9488', dotClass: 'bg-teal-600' },
+      'IKU 1': { stroke: '#EA580C', dotClass: 'bg-orange-600' },
+      'IKU 3': { stroke: '#2563EB', dotClass: 'bg-blue-600' },
+      'IKU 4': { stroke: '#D97706', dotClass: 'bg-amber-600' },
+      'IKU 6': { stroke: '#E11D48', dotClass: 'bg-rose-600' },
+      'IKU 7': { stroke: '#4F46E5', dotClass: 'bg-indigo-600' },
+      'IKU 8': { stroke: '#059669', dotClass: 'bg-emerald-600' },
     };
-  }, [data, total]);
+
+    const ikuItems = Object.entries(countMap)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => {
+        const pctNumber = (count / totalKS) * 100;
+        const cfg = colorConfig[name] || { stroke: '#64748B', dotClass: 'bg-slate-500' };
+        return {
+          name,
+          count,
+          pct: pctNumber,
+          pctFormatted: pctNumber >= 10 ? pctNumber.toFixed(0) : pctNumber.toFixed(1),
+          stroke: cfg.stroke,
+          dotClass: cfg.dotClass,
+        };
+      });
+
+    const nonIkuPct = (nonIkuCount / totalKS) * 100;
+    const allSlices: {
+      name: string;
+      count: number;
+      pct: number;
+      stroke: string;
+      dotClass: string;
+      offset: number;
+    }[] = [];
+
+    let currentOffset = 0;
+    ikuItems.forEach((item) => {
+      allSlices.push({
+        name: item.name,
+        count: item.count,
+        pct: item.pct,
+        stroke: item.stroke,
+        dotClass: item.dotClass,
+        offset: currentOffset,
+      });
+      currentOffset += item.pct;
+    });
+
+    if (nonIkuCount > 0) {
+      allSlices.push({
+        name: 'Belum Terpetakan',
+        count: nonIkuCount,
+        pct: nonIkuPct,
+        stroke: '#CBD5E1',
+        dotClass: 'bg-slate-300',
+        offset: currentOffset,
+      });
+    }
+
+    const totalIkuPct = Math.round((totalWithIku / totalKS) * 100);
+
+    return {
+      totalKS,
+      totalWithIku,
+      totalIkuPct,
+      ikuItems,
+      nonIkuCount,
+      nonIkuPct: nonIkuPct >= 10 ? nonIkuPct.toFixed(0) : nonIkuPct.toFixed(1),
+      allSlices,
+    };
+  }, [data]);
 
   // Rasio kerja sama aktif mengacu pada T_kegiatan.tgl_selesai
   const kerjaSamaStatusCounts = React.useMemo(() => {
@@ -165,16 +249,6 @@ export default function StatsOverview({
     return detailedDocCounts.pks + detailedDocCounts.psm + detailedDocCounts.kontrak;
   }, [detailedDocCounts]);
 
-  const uniqueMitraCount = React.useMemo(() => {
-    const names = new Set<string>();
-    data.forEach((d) => {
-      d.mitras?.forEach((m) => {
-        if (m.nama?.trim()) names.add(m.nama.trim());
-      });
-    });
-    return names.size;
-  }, [data]);
-
   const growth = React.useMemo(() => {
     if (previousCount === undefined) return null;
     if (previousCount === 0) return data.length > 0 ? { text: 'Baru', positive: true } : null;
@@ -183,6 +257,40 @@ export default function StatsOverview({
   }, [data.length, previousCount]);
 
   const trendPaths = React.useMemo(() => buildTrendPaths(trend), [trend]);
+
+  // Ranking Kategori Kerja Sama (Top 5 per halaman)
+  const [categoryPage, setCategoryPage] = React.useState(0);
+
+  const rankedCategories = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    data.forEach((d) => {
+      const j = (d.jenis_dokumen || '').toUpperCase();
+      const isKs = j.includes('PKS') || j.includes('PERJANJIAN KERJA') || j.includes('PSM') || j.includes('KONTRAK');
+      if (!isKs) return;
+      const cat = d.program?.trim() || 'Lainnya';
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+
+    if (Object.keys(counts).length === 0) {
+      data.forEach((d) => {
+        const cat = d.program?.trim() || 'Lainnya';
+        counts[cat] = (counts[cat] || 0) + 1;
+      });
+    }
+
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [data]);
+
+  const pageSize = 5;
+  const totalCategoryPages = Math.ceil(rankedCategories.length / pageSize) || 1;
+  const safeCategoryPage = Math.min(categoryPage, totalCategoryPages - 1);
+  const currentCategories = rankedCategories.slice(
+    safeCategoryPage * pageSize,
+    (safeCategoryPage + 1) * pageSize
+  );
+  const maxCategoryCount = rankedCategories[0]?.count || 1;
 
   return (
     <div className="w-full space-y-5">
@@ -347,46 +455,131 @@ export default function StatsOverview({
             </div>
 
             <div className="w-full pt-2 border-t border-slate-100 text-[11px] flex justify-between text-slate-500">
-              <span className="font-medium text-slate-700">
+              <span
+                onClick={() => onFilterStatus?.('Active')}
+                className="font-medium text-slate-700 cursor-pointer hover:text-sky-700 transition-colors"
+                title="Klik untuk filter kerja sama aktif"
+              >
                 <span className="font-bold text-sky-700">{kerjaSamaStatusCounts.active}</span> Kerja Sama Aktif
               </span>
-              <span className="text-slate-500 font-medium">
+              <span
+                onClick={() => onFilterStatus?.('Expired')}
+                className="text-slate-500 font-medium cursor-pointer hover:text-rose-700 transition-colors"
+                title="Klik untuk filter kerja sama selesai"
+              >
                 <span className="font-semibold text-rose-600">{kerjaSamaStatusCounts.expired}</span> Selesai
               </span>
             </div>
           </div>
 
-          {/* Card 3: Mitra Kerja Sama & Kolaborasi */}
+          {/* Card 3: Top Kategori Kerja Sama Horizontal Bar */}
           <div className="bg-gradient-to-b from-sky-50/50 to-white p-4 sm:p-5 rounded-xl border border-sky-100 flex flex-col justify-between">
-            <div className="flex items-start justify-between">
+            {/* Header: Title and Pagination Next/Prev */}
+            <div className="flex items-start justify-between pb-1">
               <div>
-                <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">Mitra Kerja Sama</span>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl font-extrabold text-slate-900">{uniqueMitraCount}</span>
-                  <span className="text-xs text-slate-500 font-medium">instansi unik</span>
+                <span className="text-xs font-bold text-sky-800 uppercase tracking-wider block">
+                  Top Kategori Kerja Sama
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  {rankedCategories.length === 0
+                    ? '0 Kategori'
+                    : `Rank ${safeCategoryPage * pageSize + 1}–${Math.min(
+                        (safeCategoryPage + 1) * pageSize,
+                        rankedCategories.length
+                      )} dari ${rankedCategories.length} Kategori`}
+                </span>
+              </div>
+
+              {/* Prev / Next Pagination Buttons */}
+              <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setCategoryPage((p) => Math.max(0, p - 1))}
+                  disabled={safeCategoryPage === 0}
+                  className="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:bg-sky-50 hover:text-sky-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="5 Kategori Sebelumnya"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-[10px] font-bold text-slate-600 px-1 select-none">
+                  {safeCategoryPage + 1}/{totalCategoryPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCategoryPage((p) =>
+                      Math.min(totalCategoryPages - 1, p + 1)
+                    )
+                  }
+                  disabled={safeCategoryPage >= totalCategoryPages - 1}
+                  className="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:bg-sky-50 hover:text-sky-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="5 Kategori Berikutnya"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Horizontal Bar Chart List */}
+            <div className="my-2 space-y-1.5 flex-1 flex flex-col justify-center">
+              {currentCategories.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-400">
+                  Tidak ada data kategori
                 </div>
-              </div>
-              <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600">
-                <Building2 className="w-5 h-5" />
-              </div>
+              ) : (
+                currentCategories.map((item, idx) => {
+                  const rank = safeCategoryPage * pageSize + idx + 1;
+                  const pct = Math.max(
+                    8,
+                    Math.round((item.count / maxCategoryCount) * 100)
+                  );
+                  return (
+                    <div
+                      key={item.name}
+                      onClick={() => onFilterProgram?.(item.name)}
+                      className="group relative w-full h-7 rounded-lg bg-slate-100/80 overflow-hidden border border-slate-200/60 hover:border-sky-300 transition-all cursor-pointer"
+                      title={`Klik untuk filter tabel: ${item.name} (${item.count} kerja sama)`}
+                    >
+                      {/* Horizontal Bar Fill */}
+                      <div
+                        className="h-full bg-gradient-to-r from-sky-200 via-sky-100 to-sky-50 border-r-2 border-sky-500 group-hover:from-sky-300 group-hover:via-sky-200 transition-all duration-300"
+                        style={{ width: `${pct}%` }}
+                      />
+
+                      {/* Text content inside the bar */}
+                      <div className="absolute inset-0 px-2.5 flex items-center justify-between pointer-events-none">
+                        <div className="flex items-center gap-1.5 truncate pr-2">
+                          <span className="text-[10px] font-extrabold text-sky-900 shrink-0">
+                            #{rank}
+                          </span>
+                          <span
+                            className="truncate font-semibold text-slate-800 text-[11px]"
+                            title={item.name}
+                          >
+                            {item.name}
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-900 shrink-0">
+                          {item.count}{' '}
+                          <span className="font-normal text-[10px] text-slate-500">
+                            KS
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
 
-            {/* Status Pill Badge */}
-            <div className="my-3 p-3 bg-emerald-50/80 rounded-xl border border-emerald-200/80 flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-              <div className="text-left">
-                <span className="text-xs font-bold text-emerald-900 block leading-tight">
-                  Kemitraan Strategis Berkelanjutan
-                </span>
-                <span className="text-[11px] text-emerald-700">
-                  Kolaborasi Industri, Pemerintah & Edukasi
-                </span>
-              </div>
-            </div>
-
+            {/* Footer */}
             <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-              <span>Mitra Industri & Edukasi</span>
-              <span className="text-sky-600 font-semibold">Lihat Rincian &rarr;</span>
+              <span className="text-sky-600 font-medium">
+                Klik bar untuk filter tabel
+              </span>
+              <span className="font-semibold text-slate-600">
+                {rankedCategories.reduce((acc, c) => acc + c.count, 0)} Kerja Sama
+              </span>
             </div>
           </div>
         </div>
@@ -395,91 +588,103 @@ export default function StatsOverview({
       {/* SECTION 2: Status Breakdown & Jenis Dokumen Stacked Bars */}
       <div className="bg-white rounded-2xl border border-sky-100 shadow-xs p-5 md:p-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-          {/* Left: Donut Chart Status (5 cols) */}
-          <div className="lg:col-span-5 flex flex-col sm:flex-row items-center gap-5 p-4 bg-slate-50/60 rounded-xl border border-slate-100">
-            {/* Donut representation */}
-            <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 42 42">
-                <circle cx="21" cy="21" r="16" fill="none" stroke="#E2E8F0" strokeWidth="5"/>
-                {/* Active: Deep Blue */}
-                <circle
-                  cx="21"
-                  cy="21"
-                  r="16"
-                  fill="none"
-                  stroke="#0284C7"
-                  strokeWidth="5"
-                  strokeDasharray={`${statusCounts.activePct} 100`}
-                  strokeDashoffset="0"
-                />
-                {/* Expired: Warm Orange */}
-                <circle
-                  cx="21"
-                  cy="21"
-                  r="16"
-                  fill="none"
-                  stroke="#F97316"
-                  strokeWidth="5"
-                  strokeDasharray={`${statusCounts.expiredPct} 100`}
-                  strokeDashoffset={`-${statusCounts.activePct}`}
-                />
-                {/* Unknown: Light Cyan */}
-                <circle
-                  cx="21"
-                  cy="21"
-                  r="16"
-                  fill="none"
-                  stroke="#38BDF8"
-                  strokeWidth="5"
-                  strokeDasharray={`${statusCounts.unknownPct} 100`}
-                  strokeDashoffset={`-${statusCounts.activePct + statusCounts.expiredPct}`}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-lg font-black text-slate-900">{data.length}</span>
-                <span className="text-[9px] text-slate-500 font-bold uppercase">Dokumen</span>
+          {/* Left: Donut Chart IKU (5 cols) */}
+          <div className="lg:col-span-5 flex flex-col p-4 bg-slate-50/60 rounded-xl border border-slate-100">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-bold text-slate-800 text-sm">
+                  Dukungan IKU Kerja Sama
+                </h3>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Indikator Kinerja Utama
+                </p>
               </div>
+              <span className="text-[11px] font-bold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
+                {ikuStats.totalWithIku} / {ikuStats.totalKS} KS ({ikuStats.totalIkuPct}%)
+              </span>
             </div>
 
-            {/* Legend & Details */}
-            <div className="space-y-2 text-xs w-full">
-              <h3 className="font-bold text-slate-800 text-sm mb-1.5">Status Capaian Dokumen</h3>
-              <div 
-                onClick={() => onFilterStatus?.('Active')}
-                className="flex items-center justify-between p-1.5 rounded-lg hover:bg-sky-100/60 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-sky-600 shrink-0"></span>
-                  <span className="font-medium text-slate-700">Aktif</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900">{statusCounts.active}</span>
-                  <span className="text-[11px] text-slate-400">({statusCounts.activePct}%)</span>
+            <div className="flex flex-col sm:flex-row items-center gap-5">
+              {/* Donut representation */}
+              <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 42 42">
+                  <circle cx="21" cy="21" r="16" fill="none" stroke="#F1F5F9" strokeWidth="5" />
+                  {ikuStats.allSlices.map((slice) => (
+                    <circle
+                      key={slice.name}
+                      cx="21"
+                      cy="21"
+                      r="16"
+                      pathLength={100}
+                      fill="none"
+                      stroke={slice.stroke}
+                      strokeWidth="5"
+                      strokeDasharray={`${slice.pct} 100`}
+                      strokeDashoffset={-slice.offset}
+                      className="transition-all duration-500"
+                    />
+                  ))}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-xl font-black text-slate-900 leading-none">
+                    {ikuStats.totalWithIku}
+                  </span>
+                  <span className="text-[9px] text-sky-700 font-bold uppercase tracking-tight mt-0.5">
+                    Mendukung IKU
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-semibold">
+                    {ikuStats.totalIkuPct}% KS
+                  </span>
                 </div>
               </div>
 
-              <div 
-                onClick={() => onFilterStatus?.('Expired')}
-                className="flex items-center justify-between p-1.5 rounded-lg hover:bg-orange-100/60 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-orange-500 shrink-0"></span>
-                  <span className="font-medium text-slate-700">Expired</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900">{statusCounts.expired}</span>
-                  <span className="text-[11px] text-slate-400">({statusCounts.expiredPct}%)</span>
-                </div>
-              </div>
+              {/* Legend & Details: Proporsi diikuti jumlah kerja sama */}
+              <div className="space-y-1.5 text-xs w-full">
+                {ikuStats.ikuItems.map((item) => (
+                  <div
+                    key={item.name}
+                    onClick={() => onFilterIku?.(item.name)}
+                    className="flex items-center justify-between p-1.5 rounded-lg hover:bg-sky-50/80 transition-colors cursor-pointer group"
+                    title={`Klik untuk filter tabel: ${item.name} (${item.count} kerja sama)`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${item.dotClass} shrink-0`} />
+                      <span className="font-semibold text-slate-700 group-hover:text-sky-700 transition-colors">
+                        {item.name}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-bold text-slate-900">
+                        {item.pctFormatted}%
+                      </span>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        ({item.count} Kerja Sama)
+                      </span>
+                    </div>
+                  </div>
+                ))}
 
-              <div className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-sky-400 shrink-0"></span>
-                  <span className="font-medium text-slate-700">Dalam Proses / Lainnya</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900">{statusCounts.unknown}</span>
-                  <span className="text-[11px] text-slate-400">({statusCounts.unknownPct}%)</span>
+                {/* Non-IKU / Belum Terpetakan */}
+                <div
+                  onClick={() => onFilterIku?.('')}
+                  className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-100/80 transition-colors cursor-pointer group"
+                  title={`Klik untuk reset filter IKU: Belum Terpetakan (${ikuStats.nonIkuCount} kerja sama)`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0" />
+                    <span className="font-medium text-slate-500 group-hover:text-slate-700 transition-colors">
+                      Belum Terpetakan
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-semibold text-slate-700">
+                      {ikuStats.nonIkuPct}%
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      ({ikuStats.nonIkuCount} Kerja Sama)
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

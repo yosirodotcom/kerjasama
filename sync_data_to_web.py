@@ -159,21 +159,26 @@ def generate_ts_data():
         # Collect kategori kegiatan and dates from associated activities in T_kegiatan
         kategori_kegiatan_list = []
         sub_kategori_list = []
+        iku_list = []
         selesai_dates = []
         for kid in kids:
             k_info = keg_map.get(kid, {})
             kat = safe(k_info.get('kategori_kegiatan'))
             sub = safe(k_info.get('sub_kategori'))
+            ik = safe(k_info.get('iku'))
             t_sel = normalize_date(k_info.get('tgl_selesai'), dok.name)
             if kat and kat not in kategori_kegiatan_list:
                 kategori_kegiatan_list.append(kat)
             if sub and sub not in sub_kategori_list:
                 sub_kategori_list.append(sub)
+            if ik and ik not in iku_list:
+                iku_list.append(ik)
             if t_sel:
                 selesai_dates.append(t_sel)
 
         program_val = ', '.join(kategori_kegiatan_list) if kategori_kegiatan_list else safe(dok.get('program'))
         sub_kategori_val = ', '.join(sub_kategori_list)
+        iku_val = ', '.join(iku_list)
         tgl_selesai_keg = max(selesai_dates) if selesai_dates else ''
 
         records.append({
@@ -192,6 +197,7 @@ def generate_ts_data():
             'jabatan_penandatangan': safe(dok.get('jabatan_penandatangan')),
             'program': program_val,
             'sub_kategori': sub_kategori_val,
+            'iku': iku_val,
             'wilayah_kerjasama': wilayah,
             'judul_dokumen': safe(p.get('judul_dokumen')),
             'nama_inisiator': safe(inisiator.get('nama')),
@@ -241,6 +247,7 @@ export interface JoinedDokumen {{
   jabatan_penandatangan?: string;
   program?: string;
   sub_kategori?: string;
+  iku?: string;
   wilayah_kerjasama?: string;
   judul_dokumen?: string;
   nama_inisiator?: string;
